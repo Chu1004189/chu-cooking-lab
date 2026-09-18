@@ -390,18 +390,86 @@ function renderSearchPreview() {
 }
 
 function bindDrag(row) {
-  row.addEventListener("dragstart",()=>{draggedIngredient=row;row.style.opacity=".45"});
-  row.addEventListener("dragend",()=>{draggedIngredient=null;row.style.opacity="";scheduleSave()});
-  row.addEventListener("dragover",e=>{e.preventDefault()});
-  row.addEventListener("drop",e=>{
+  const handle = row.querySelector(".drag-handle");
+  if (!handle) return;
+
+  let startY = 0;
+  let dragging = false;
+  let placeholder = null;
+
+  handle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    if(!draggedIngredient||draggedIngredient===row)return;
-    const list=$("#ingredientList");
-    const rect=row.getBoundingClientRect();
-    if(e.clientY<rect.top+rect.height/2) list.insertBefore(draggedIngredient,row);
-    else list.insertBefore(draggedIngredient,row.nextSibling);
-    scheduleSave();
+
+    startY = e.clientY;
+    dragging = true;
+
+    row.setPointerCapture?.(e.pointerId);
+
+    row.classList.add("is-dragging");
+
+    placeholder = document.createElement("div");
+    placeholder.className = "ingredient-placeholder";
+    placeholder.style.height = `${row.offsetHeight}px`;
+
+    row.parentNode.insertBefore(placeholder, row);
+
+    row.style.width = `${row.offsetWidth}px`;
+    row.style.position = "relative";
+    row.style.zIndex = "1000";
+
+    document.body.style.userSelect = "none";
+    document.body.style.webkitUserSelect = "none";
   });
+
+  handle.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+
+    e.preventDefault();
+
+    const list = $("#ingredientList");
+    const rows = [...list.querySelectorAll(".ingredient-row:not(.is-dragging)")];
+
+    const currentY = e.clientY;
+
+    for (const target of rows) {
+      const rect = target.getBoundingClientRect();
+      const middle = rect.top + rect.height / 2;
+
+      if (currentY < middle) {
+        list.insertBefore(placeholder, target);
+        break;
+      }
+
+      if (target === rows[rows.length - 1]) {
+        list.appendChild(placeholder);
+      }
+    }
+  });
+
+  const finishDrag = () => {
+    if (!dragging) return;
+
+    dragging = false;
+
+    if (placeholder) {
+      placeholder.parentNode.insertBefore(row, placeholder);
+      placeholder.remove();
+      placeholder = null;
+    }
+
+    row.classList.remove("is-dragging");
+    row.style.width = "";
+    row.style.position = "";
+    row.style.zIndex = "";
+
+    document.body.style.userSelect = "";
+    document.body.style.webkitUserSelect = "";
+
+    scheduleSave();
+  };
+
+  handle.addEventListener("pointerup", finishDrag);
+  handle.addEventListener("pointercancel", finishDrag);
 }
 
 function handleImage(file) {
