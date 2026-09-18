@@ -726,6 +726,11 @@ function renderSearchPreview() {
     "タグ・材料を入力すると自動生成されます。";
 }
 
+
+/* =========================================
+   材料のドラッグ並び替え
+   ========================================= */
+
 function bindDrag(row) {
   const handle = row.querySelector(".drag-handle");
   if (!handle) return;
@@ -733,6 +738,7 @@ function bindDrag(row) {
   let dragging = false;
   let startY = 0;
   let startTop = 0;
+  let placeholder = null;
 
   handle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
@@ -746,32 +752,103 @@ function bindDrag(row) {
 
       const distance = Math.abs(ev.clientY - startY);
 
+      /* ---------------------------------
+         少し動くまでは普通のタップ扱い
+      --------------------------------- */
+
       if (!dragging) {
         if (distance < 8) return;
 
         dragging = true;
 
         const rect = row.getBoundingClientRect();
+
         startTop = rect.top;
+
+        /* ---------------------------------
+           元の場所に「空き」を残す
+        --------------------------------- */
+
+        placeholder =
+          document.createElement("div");
+
+        placeholder.className =
+          "ingredient-placeholder";
+
+        placeholder.style.height =
+          `${rect.height}px`;
+
+        placeholder.style.borderRadius =
+          "9px";
+
+        placeholder.style.border =
+          "1px dashed var(--line)";
+
+        placeholder.style.background =
+          "rgba(143,175,114,.08)";
+
+        placeholder.style.boxSizing =
+          "border-box";
+
+        row.parentNode.insertBefore(
+          placeholder,
+          row
+        );
+
+        /* ---------------------------------
+           行を浮かせる
+        --------------------------------- */
 
         row.classList.add("is-dragging");
 
-        row.style.width = `${rect.width}px`;
-        row.style.position = "fixed";
-        row.style.left = `${rect.left}px`;
-        row.style.top = `${startTop}px`;
-        row.style.zIndex = "1000";
+        row.style.width =
+          `${rect.width}px`;
 
-        document.body.style.userSelect = "none";
-        document.body.style.webkitUserSelect = "none";
+        row.style.position =
+          "fixed";
+
+        row.style.left =
+          `${rect.left}px`;
+
+        row.style.top =
+          `${startTop}px`;
+
+        row.style.zIndex =
+          "1000";
+
+        row.style.transition =
+          "box-shadow .15s ease, transform .15s ease";
+
+        row.style.boxShadow =
+          "0 14px 32px rgba(40,40,35,.20)";
+
+        row.style.transform =
+          "scale(1.025)";
+
+        document.body.style.userSelect =
+          "none";
+
+        document.body.style.webkitUserSelect =
+          "none";
       }
 
-      const offset = ev.clientY - startY;
+      /* ---------------------------------
+         指についてくる
+      --------------------------------- */
+
+      const offset =
+        ev.clientY - startY;
 
       row.style.transform =
-        `translateY(${offset}px) scale(1.02)`;
+        `translateY(${offset}px) scale(1.025)`;
 
-      const list = $("#ingredientList");
+
+      /* ---------------------------------
+         他の材料を判定
+      --------------------------------- */
+
+      const list =
+        $("#ingredientList");
 
       const rows = [
         ...list.querySelectorAll(
@@ -779,26 +856,92 @@ function bindDrag(row) {
         )
       ];
 
-      const currentY = ev.clientY;
+      const currentY =
+        ev.clientY;
+
+
+      /* ---------------------------------
+         上方向へ移動
+      --------------------------------- */
 
       for (const target of rows) {
-        const rect = target.getBoundingClientRect();
-        const middle = rect.top + rect.height / 2;
+        const rect =
+          target.getBoundingClientRect();
+
+        const middle =
+          rect.top + rect.height / 2;
 
         if (currentY < middle) {
-          list.insertBefore(row, target);
+
+          if (
+            placeholder !==
+            target.previousElementSibling
+          ) {
+            list.insertBefore(
+              placeholder,
+              target
+            );
+          }
+
           return;
         }
       }
 
+
+      /* ---------------------------------
+         一番下へ移動
+      --------------------------------- */
+
       if (rows.length) {
-        list.appendChild(row);
+
+        const last =
+          rows[rows.length - 1];
+
+        if (
+          placeholder !==
+          last.nextElementSibling
+        ) {
+          list.appendChild(
+            placeholder
+          );
+        }
       }
     };
 
+
+    /* =================================
+       ドラッグ終了
+    ================================= */
+
     const finish = () => {
+
       if (dragging) {
-        row.classList.remove("is-dragging");
+
+        /* ---------------------------------
+           プレースホルダーの位置に
+           元の行を戻す
+        --------------------------------- */
+
+        if (placeholder) {
+
+          placeholder.parentNode.insertBefore(
+            row,
+            placeholder
+          );
+
+          placeholder.remove();
+
+          placeholder = null;
+        }
+
+
+        /* ---------------------------------
+           浮遊状態を解除
+        --------------------------------- */
+
+        row.classList.remove(
+          "is-dragging"
+        );
 
         row.style.width = "";
         row.style.position = "";
@@ -806,14 +949,25 @@ function bindDrag(row) {
         row.style.top = "";
         row.style.zIndex = "";
         row.style.transform = "";
+        row.style.transition = "";
+        row.style.boxShadow = "";
 
-        document.body.style.userSelect = "";
-        document.body.style.webkitUserSelect = "";
+        document.body.style.userSelect =
+          "";
+
+        document.body.style.webkitUserSelect =
+          "";
+
+
+        /* ---------------------------------
+           保存
+        --------------------------------- */
 
         scheduleSave();
       }
 
       dragging = false;
+
 
       handle.removeEventListener(
         "pointermove",
@@ -830,6 +984,7 @@ function bindDrag(row) {
         finish
       );
     };
+
 
     handle.addEventListener(
       "pointermove",
