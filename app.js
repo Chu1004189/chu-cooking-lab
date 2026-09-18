@@ -393,83 +393,98 @@ function bindDrag(row) {
   const handle = row.querySelector(".drag-handle");
   if (!handle) return;
 
-  let startY = 0;
   let dragging = false;
   let placeholder = null;
 
   handle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
 
-    startY = e.clientY;
-    dragging = true;
+    handle.setPointerCapture?.(e.pointerId);
 
-    row.setPointerCapture?.(e.pointerId);
+    const startY = e.clientY;
 
-    row.classList.add("is-dragging");
+    const startDrag = () => {
+      if (dragging) return;
 
-    placeholder = document.createElement("div");
-    placeholder.className = "ingredient-placeholder";
-    placeholder.style.height = `${row.offsetHeight}px`;
+      dragging = true;
 
-    row.parentNode.insertBefore(placeholder, row);
+      row.classList.add("is-dragging");
 
-    row.style.width = `${row.offsetWidth}px`;
-    row.style.position = "relative";
-    row.style.zIndex = "1000";
+      placeholder = document.createElement("div");
+      placeholder.className = "ingredient-placeholder";
+      placeholder.style.height = `${row.offsetHeight}px`;
 
-    document.body.style.userSelect = "none";
-    document.body.style.webkitUserSelect = "none";
-  });
+      row.parentNode.insertBefore(placeholder, row);
 
-  handle.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
+      row.style.width = `${row.offsetWidth}px`;
+      row.style.position = "relative";
+      row.style.zIndex = "1000";
 
-    e.preventDefault();
+      document.body.style.userSelect = "none";
+      document.body.style.webkitUserSelect = "none";
+    };
 
-    const list = $("#ingredientList");
-    const rows = [...list.querySelectorAll(".ingredient-row:not(.is-dragging)")];
+    const move = (ev) => {
+      const distance = Math.abs(ev.clientY - startY);
 
-    const currentY = e.clientY;
-
-    for (const target of rows) {
-      const rect = target.getBoundingClientRect();
-      const middle = rect.top + rect.height / 2;
-
-      if (currentY < middle) {
-        list.insertBefore(placeholder, target);
-        break;
+      // 少し動かすまでは「押しただけ」として扱う
+      if (!dragging) {
+        if (distance < 8) return;
+        startDrag();
       }
 
-      if (target === rows[rows.length - 1]) {
-        list.appendChild(placeholder);
+      ev.preventDefault();
+
+      const list = $("#ingredientList");
+      const rows = [
+        ...list.querySelectorAll(".ingredient-row:not(.is-dragging)")
+      ];
+
+      const currentY = ev.clientY;
+
+      for (const target of rows) {
+        const rect = target.getBoundingClientRect();
+        const middle = rect.top + rect.height / 2;
+
+        if (currentY < middle) {
+          list.insertBefore(placeholder, target);
+          return;
+        }
       }
-    }
+
+      list.appendChild(placeholder);
+    };
+
+    const finish = () => {
+      if (dragging) {
+        if (placeholder) {
+          placeholder.parentNode.insertBefore(row, placeholder);
+          placeholder.remove();
+          placeholder = null;
+        }
+
+        row.classList.remove("is-dragging");
+        row.style.width = "";
+        row.style.position = "";
+        row.style.zIndex = "";
+
+        document.body.style.userSelect = "";
+        document.body.style.webkitUserSelect = "";
+
+        scheduleSave();
+      }
+
+      dragging = false;
+
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", finish);
+      handle.removeEventListener("pointercancel", finish);
+    };
+
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", finish);
+    handle.addEventListener("pointercancel", finish);
   });
-
-  const finishDrag = () => {
-    if (!dragging) return;
-
-    dragging = false;
-
-    if (placeholder) {
-      placeholder.parentNode.insertBefore(row, placeholder);
-      placeholder.remove();
-      placeholder = null;
-    }
-
-    row.classList.remove("is-dragging");
-    row.style.width = "";
-    row.style.position = "";
-    row.style.zIndex = "";
-
-    document.body.style.userSelect = "";
-    document.body.style.webkitUserSelect = "";
-
-    scheduleSave();
-  };
-
-  handle.addEventListener("pointerup", finishDrag);
-  handle.addEventListener("pointercancel", finishDrag);
 }
 
 function handleImage(file) {
