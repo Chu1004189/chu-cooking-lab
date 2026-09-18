@@ -471,7 +471,7 @@ function addStepRow(
     </div>
 
     <div class="step-body">
-      <textarea placeholder="この手順で何をする？">${escapeHtml(data.text || "")}</textarea>
+      <textarea placeholder="手順">${escapeHtml(data.text || "")}</textarea>
 
       <div class="link-summary">
         ${(data.links || []).map(n =>
