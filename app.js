@@ -682,8 +682,6 @@ function generateCode() {
   });
 
   const steps = r.steps.map(s => {
-    // For the current recipes.js format, linked material metadata is not required;
-    // the text remains plain so it can be pasted directly.
     return `"${esc(s.text || "")}"`;
   });
 
@@ -733,45 +731,45 @@ function bindDrag(row) {
   if (!handle) return;
 
   let dragging = false;
-  let placeholder = null;
+  let startY = 0;
+  let startTop = 0;
 
   handle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
 
     handle.setPointerCapture?.(e.pointerId);
 
-    const startY = e.clientY;
-
-    const startDrag = () => {
-      if (dragging) return;
-
-      dragging = true;
-
-      row.classList.add("is-dragging");
-
-      placeholder = document.createElement("div");
-      placeholder.className = "ingredient-placeholder";
-      placeholder.style.height = `${row.offsetHeight}px`;
-
-      row.parentNode.insertBefore(placeholder, row);
-
-      row.style.width = `${row.offsetWidth}px`;
-      row.style.position = "relative";
-      row.style.zIndex = "1000";
-
-      document.body.style.userSelect = "none";
-      document.body.style.webkitUserSelect = "none";
-    };
+    startY = e.clientY;
 
     const move = (ev) => {
+      ev.preventDefault();
+
       const distance = Math.abs(ev.clientY - startY);
 
       if (!dragging) {
         if (distance < 8) return;
-        startDrag();
+
+        dragging = true;
+
+        const rect = row.getBoundingClientRect();
+        startTop = rect.top;
+
+        row.classList.add("is-dragging");
+
+        row.style.width = `${rect.width}px`;
+        row.style.position = "fixed";
+        row.style.left = `${rect.left}px`;
+        row.style.top = `${startTop}px`;
+        row.style.zIndex = "1000";
+
+        document.body.style.userSelect = "none";
+        document.body.style.webkitUserSelect = "none";
       }
 
-      ev.preventDefault();
+      const offset = ev.clientY - startY;
+
+      row.style.transform =
+        `translateY(${offset}px) scale(1.02)`;
 
       const list = $("#ingredientList");
 
@@ -788,31 +786,26 @@ function bindDrag(row) {
         const middle = rect.top + rect.height / 2;
 
         if (currentY < middle) {
-          list.insertBefore(placeholder, target);
+          list.insertBefore(row, target);
           return;
         }
       }
 
-      list.appendChild(placeholder);
+      if (rows.length) {
+        list.appendChild(row);
+      }
     };
 
     const finish = () => {
       if (dragging) {
-        if (placeholder) {
-          placeholder.parentNode.insertBefore(
-            row,
-            placeholder
-          );
-
-          placeholder.remove();
-          placeholder = null;
-        }
-
         row.classList.remove("is-dragging");
 
         row.style.width = "";
         row.style.position = "";
+        row.style.left = "";
+        row.style.top = "";
         row.style.zIndex = "";
+        row.style.transform = "";
 
         document.body.style.userSelect = "";
         document.body.style.webkitUserSelect = "";
@@ -822,14 +815,36 @@ function bindDrag(row) {
 
       dragging = false;
 
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", finish);
-      handle.removeEventListener("pointercancel", finish);
+      handle.removeEventListener(
+        "pointermove",
+        move
+      );
+
+      handle.removeEventListener(
+        "pointerup",
+        finish
+      );
+
+      handle.removeEventListener(
+        "pointercancel",
+        finish
+      );
     };
 
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", finish);
-    handle.addEventListener("pointercancel", finish);
+    handle.addEventListener(
+      "pointermove",
+      move
+    );
+
+    handle.addEventListener(
+      "pointerup",
+      finish
+    );
+
+    handle.addEventListener(
+      "pointercancel",
+      finish
+    );
   });
 }
 
