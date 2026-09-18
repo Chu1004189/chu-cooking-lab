@@ -85,3 +85,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .drag-handle:active {
   cursor: grabbing;
 }
+
+/* 手順追加ボタン */
+.step-add-bottom {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
