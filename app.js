@@ -758,10 +758,6 @@ function addPartRow(
   row.dataset.partId =
     part.id;
 
-  /*
-    既存データに unit がない場合は
-    パーツの初期単位を使用
-  */
   const unit =
     data.unit !== undefined
       ? data.unit
@@ -974,20 +970,45 @@ function renumberSteps() {
     );
 }
 
+
+/* =========================================
+   手順に材料を指定
+   複数選択対応版
+   ========================================= */
+
 function openIngredientLinkModal(row) {
 
   const r =
     getEditing();
 
+  if (!r) return;
+
+  /*
+   * 現在この手順に指定されている材料
+   */
   const existing =
     [
       ...row.querySelectorAll(
         ".linked-chip"
       )
-    ].map(
-      c => c.dataset.name
-    );
+    ]
+      .map(
+        c => c.dataset.name
+      );
 
+  /*
+   * 選択状態を Set で管理する。
+   *
+   * Set にすることで、
+   * 何個でも追加・削除できる。
+   */
+  const selected =
+    new Set(existing);
+
+  /*
+   * 通常の材料だけを対象にする。
+   * パーツはここでは対象外。
+   */
   const ingredients =
     (r.ingredients || [])
       .filter(
@@ -1037,8 +1058,14 @@ function openIngredientLinkModal(row) {
       "#linkOptions"
     );
 
+  /*
+   * 材料一覧を作る
+   */
   ingredients.forEach(
     item => {
+
+      const name =
+        item.name.trim();
 
       const b =
         document.createElement(
@@ -1052,13 +1079,11 @@ function openIngredientLinkModal(row) {
         "part-option";
 
       b.dataset.name =
-        item.name;
+        name;
 
       b.innerHTML = `
         <strong>
-          ${escapeHtml(
-            item.name
-          )}
+          ${escapeHtml(name)}
         </strong>
 
         <span>
@@ -1069,68 +1094,121 @@ function openIngredientLinkModal(row) {
         </span>
       `;
 
+      /*
+       * すでに指定されている材料は
+       * 最初から選択状態にする
+       */
       if (
-        existing.includes(
-          item.name
-        )
+        selected.has(name)
       ) {
 
-        b.style.borderColor =
-          "var(--blue)";
+        b.classList.add(
+          "selected"
+        );
       }
 
+      /*
+       * クリックで
+       *
+       * 未選択 → 選択
+       * 選択中 → 解除
+       *
+       * を切り替える。
+       */
       b.addEventListener(
         "click",
-        () =>
-          b.classList.toggle(
-            "selected"
-          )
+        () => {
+
+          if (
+            selected.has(name)
+          ) {
+
+            selected.delete(name);
+
+            b.classList.remove(
+              "selected"
+            );
+
+          } else {
+
+            selected.add(name);
+
+            b.classList.add(
+              "selected"
+            );
+          }
+        }
       );
 
       options.appendChild(b);
     }
   );
 
+  /*
+   * キャンセル
+   *
+   * 選択状態を保存せず閉じる。
+   */
   backdrop.querySelector(
     ".cancel-btn"
   ).addEventListener(
     "click",
-    () =>
-      backdrop.remove()
+    () => {
+
+      backdrop.remove();
+    }
   );
 
+  /*
+   * 指定する
+   */
   backdrop.querySelector(
     ".confirm-btn"
   ).addEventListener(
     "click",
     () => {
 
-      const selected =
-        [
-          ...options.querySelectorAll(
-            ".part-option.selected"
-          )
-        ].map(
-          b => b.dataset.name
-        );
+      /*
+       * Set → Array
+       */
+      const selectedNames =
+        [...selected];
 
+      /*
+       * 手順の材料チップを更新
+       */
       row.querySelector(
         ".link-summary"
       ).innerHTML =
-        selected.map(
-          n =>
-            `<span
-              class="linked-chip"
-              data-name="${escapeAttr(n)}"
-            >${escapeHtml(n)}</span>`
-        ).join("");
+        selectedNames
+          .map(
+            n =>
+              `<span
+                class="linked-chip"
+                data-name="${escapeAttr(n)}"
+              >${escapeHtml(n)}</span>`
+          )
+          .join("");
 
+      /*
+       * モーダルを閉じる
+       */
       backdrop.remove();
 
+      /*
+       * autosave
+       *
+       * syncCurrentFromDOM() が
+       * linked-chip を読み取って
+       * step.links に保存する。
+       */
       scheduleSave();
     }
   );
 
+  /*
+   * 画面に表示
+   */
   document.body.appendChild(
     backdrop
   );
