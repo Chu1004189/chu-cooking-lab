@@ -221,7 +221,8 @@ function syncCurrentFromDOM() {
       return {
         type:"part",
         partId:row.dataset.partId,
-        amount:row.querySelector(".part-amount")?.value.trim() || ""
+        amount:row.querySelector(".part-amount")?.value.trim() || "",
+        unit:row.querySelector(".part-unit")?.value.trim() || ""
       };
     }
 
@@ -384,7 +385,7 @@ function addIngredientRow(
 }
 
 function addPartRow(
-  data={partId:PARTS[0].id,amount:""},
+  data={partId:PARTS[0].id,amount:"",unit:""},
   save=true
 ) {
   const part =
@@ -408,21 +409,23 @@ function addPartRow(
 
     <input
       class="part-amount"
-      placeholder="使用量"
+      placeholder="分量"
       value="${escapeAttr(data.amount || "")}"
     >
 
-    <span class="part-unit">
-      ${escapeHtml(part.yieldUnit)}
-    </span>
+    <input
+      class="part-unit"
+      placeholder="単位"
+      value="${escapeAttr(data.unit || "")}"
+    >
 
     <button
       class="remove-row"
       type="button"
     >×</button>`;
 
-  row.querySelector("input")
-    .addEventListener("input", scheduleSave);
+  row.querySelectorAll("input")
+    .forEach(i => i.addEventListener("input", scheduleSave));
 
   row.querySelector(".remove-row")
     .addEventListener("click", () => {
@@ -673,7 +676,9 @@ function generateCode() {
     if (x.type === "part") {
       const p = PARTS.find(p => p.id === x.partId);
 
-      return `["${esc(p?.name || "")}","${esc(x.amount || "")}"]`;
+      return `["${esc(p?.name || "")}","${esc(
+        (x.amount || "") + (x.unit || "")
+      )}"]`;
     }
 
     return `["${esc(x.name || "")}","${esc(
@@ -1164,7 +1169,8 @@ $("#addPart").addEventListener(
       b.addEventListener("click", () => {
         addPartRow({
           partId:p.id,
-          amount:""
+          amount:"",
+          unit:""
         });
 
         backdrop.remove();
@@ -1310,5 +1316,3 @@ window.addEventListener(
     }
   }
 );
-
-renderHome();
