@@ -1,60 +1,194 @@
+/* =================================
+   CHU dot COOKING LAB
+================================= */
+
 const STORAGE_KEY = "chu-dot-cooking-lab-v1";
 
+
+/* =================================
+   PARTS
+================================= */
+
 const PARTS = [
-  { id: "spicy-dare", name: "ピリ辛だれ", yieldAmount: "84", yieldUnit: "g" },
-  { id: "sesame-dressing", name: "ごまドレッシング", yieldAmount: "120", yieldUnit: "g" },
-  { id: "garlic-sauce", name: "にんにくだれ", yieldAmount: "70", yieldUnit: "g" }
+  {
+    id: "spicy-dare",
+    name: "ピリ辛だれ",
+    yieldAmount: "84",
+    yieldUnit: "g"
+  },
+  {
+    id: "sesame-dressing",
+    name: "ごまドレッシング",
+    yieldAmount: "120",
+    yieldUnit: "g"
+  },
+  {
+    id: "garlic-sauce",
+    name: "にんにくだれ",
+    yieldAmount: "70",
+    yieldUnit: "g"
+  }
 ];
 
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => [...document.querySelectorAll(s)];
+
+/* =================================
+   DOM HELPERS
+================================= */
+
+const $ = (selector) => document.querySelector(selector);
+
+const $$ = (selector) => [
+  ...document.querySelectorAll(selector)
+];
+
+
+/* =================================
+   STATE
+================================= */
 
 let recipes = loadRecipes();
 let editingId = null;
 let filter = "all";
 let autosaveTimer = null;
-let draggedIngredient = null;
 
-function uid() {
-  return "lab-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* =================================
+   BASIC HELPERS
+================================= */
+
+function uid(){
+  return (
+    "lab-" +
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2,7)
+  );
 }
 
-function blankRecipe() {
+
+function escapeHtml(value = ""){
+  return String(value)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+
+function normalizeArray(value){
+  return Array.isArray(value) ? value : [];
+}
+
+
+function normalizeRecipe(recipe){
+  return {
+    labId: recipe.labId || uid(),
+    id: recipe.id || "",
+    title: recipe.title || "",
+    image: recipe.image || "",
+    tags: normalizeArray(recipe.tags).length
+      ? normalizeArray(recipe.tags)
+      : [""],
+    servings:
+      recipe.servings === null ||
+      recipe.servings === undefined
+        ? ""
+        : String(recipe.servings),
+
+    ingredients: normalizeArray(recipe.ingredients).map(item => ({
+      type: item.type === "part" ? "part" : "ingredient",
+      partId: item.partId || "",
+      name: item.name || "",
+      amount:
+        item.amount === null ||
+        item.amount === undefined
+          ? ""
+          : String(item.amount),
+      unit: item.unit || ""
+    })),
+
+    steps: normalizeArray(recipe.steps).map(step => ({
+      text: step.text || "",
+      links: normalizeArray(step.links)
+    })),
+
+    status:
+      recipe.status === "complete"
+        ? "complete"
+        : "research",
+
+    updatedAt:
+      Number(recipe.updatedAt) || Date.now()
+  };
+}
+
+
+/* =================================
+   BLANK RECIPE
+================================= */
+
+function blankRecipe(){
   return {
     labId: uid(),
+
     id: "",
     title: "",
     image: "",
+
     tags: [""],
+
     servings: "",
+
     ingredients: [
       {
-        type:"ingredient",
-        name:"",
-        amount:"",
-        unit:""
+        type: "ingredient",
+        name: "",
+        amount: "",
+        unit: ""
       }
     ],
+
     steps: [
       {
-        text:"",
-        links:[]
+        text: "",
+        links: []
       }
     ],
+
     status: "research",
+
     updatedAt: Date.now()
   };
 }
 
-function loadRecipes() {
-  try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
 
-    if (Array.isArray(data)) {
-      return data;
+/* =================================
+   LOAD / SAVE
+================================= */
+
+function loadRecipes(){
+
+  try{
+
+    const raw = localStorage.getItem(STORAGE_KEY);
+
+    if(raw){
+
+      const data = JSON.parse(raw);
+
+      if(Array.isArray(data)){
+        return data.map(normalizeRecipe);
+      }
     }
 
-  } catch(e) {}
+  }catch(error){
+
+    console.warn(
+      "レシピデータの読み込みに失敗しました。",
+      error
+    );
+
+  }
 
   return [
     {
@@ -62,159 +196,195 @@ function loadRecipes() {
       id: "ebi-shio-yakisoba",
       title: "海老塩焼きそば",
       image: "",
-      tags: ["麺類","海鮮","ガッツリ"],
+      tags: [
+        "麺類",
+        "海鮮",
+        "ガッツリ"
+      ],
       servings: "2",
 
       ingredients: [
         {
-          type:"ingredient",
-          name:"中華麺",
-          amount:"2",
-          unit:"玉"
+          type: "ingredient",
+          name: "中華麺",
+          amount: "2",
+          unit: "玉"
         },
         {
-          type:"ingredient",
-          name:"むき海老",
-          amount:"120",
-          unit:"g"
+          type: "ingredient",
+          name: "むき海老",
+          amount: "120",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"キャベツ",
-          amount:"120",
-          unit:"g"
+          type: "ingredient",
+          name: "キャベツ",
+          amount: "120",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"もやし",
-          amount:"100",
-          unit:"g"
+          type: "ingredient",
+          name: "もやし",
+          amount: "100",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"ごま油",
-          amount:"10",
-          unit:"g"
+          type: "ingredient",
+          name: "ごま油",
+          amount: "10",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"鶏ガラスープの素",
-          amount:"5",
-          unit:"g"
+          type: "ingredient",
+          name: "鶏ガラスープの素",
+          amount: "5",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"塩",
-          amount:"3",
-          unit:"g"
+          type: "ingredient",
+          name: "塩",
+          amount: "3",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"黒こしょう",
-          amount:"少々",
-          unit:""
+          type: "ingredient",
+          name: "黒こしょう",
+          amount: "少々",
+          unit: ""
         },
         {
-          type:"ingredient",
-          name:"にんにく",
-          amount:"5",
-          unit:"g"
+          type: "ingredient",
+          name: "にんにく",
+          amount: "5",
+          unit: "g"
         }
       ],
 
       steps: [
         {
-          text:"フライパンにごま油とにんにくを入れて中火で熱する。",
-          links:["ごま油","にんにく"]
+          text:
+            "フライパンにごま油とにんにくを入れて中火で熱する。",
+          links: [
+            "ごま油",
+            "にんにく"
+          ]
         },
         {
-          text:"海老を加えて炒め、色が変わったらキャベツともやしを加える。",
-          links:["むき海老","キャベツ","もやし"]
+          text:
+            "海老を加えて炒め、色が変わったらキャベツともやしを加える。",
+          links: [
+            "むき海老",
+            "キャベツ",
+            "もやし"
+          ]
         },
         {
-          text:"中華麺を加えてほぐしながら炒める。",
-          links:["中華麺"]
+          text:
+            "中華麺を加えてほぐしながら炒める。",
+          links: [
+            "中華麺"
+          ]
         },
         {
-          text:"鶏ガラスープの素、塩、黒こしょうで味を整える。",
-          links:["鶏ガラスープの素","塩","黒こしょう"]
+          text:
+            "鶏ガラスープの素、塩、黒こしょうで味を整える。",
+          links: [
+            "鶏ガラスープの素",
+            "塩",
+            "黒こしょう"
+          ]
         }
       ],
 
-      status:"research",
-      updatedAt:Date.now()
+      status: "research",
+      updatedAt: Date.now()
     },
 
     {
       labId: uid(),
       id: "butakoma-shoga",
       title: "豚こま生姜焼き",
-      image:"",
-      tags:["肉料理","ごはん"],
-      servings:"2",
-
-      ingredients:[
+      image: "",
+      tags: [
+        "肉料理",
+        "ごはん"
+      ],
+      servings: "2",
+      ingredients: [
         {
-          type:"ingredient",
-          name:"豚こま肉",
-          amount:"250",
-          unit:"g"
+          type: "ingredient",
+          name: "豚こま肉",
+          amount: "250",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"醤油",
-          amount:"20",
-          unit:"g"
+          type: "ingredient",
+          name: "醤油",
+          amount: "20",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"みりん",
-          amount:"20",
-          unit:"g"
+          type: "ingredient",
+          name: "みりん",
+          amount: "20",
+          unit: "g"
         },
         {
-          type:"ingredient",
-          name:"しょうが",
-          amount:"10",
-          unit:"g"
+          type: "ingredient",
+          name: "しょうが",
+          amount: "10",
+          unit: "g"
         }
       ],
-
-      steps:[
+      steps: [
         {
-          text:"豚こま肉を炒め、調味料を加えて煮絡める。",
-          links:["豚こま肉","醤油","みりん","しょうが"]
+          text:
+            "豚こま肉を炒め、調味料を加えて煮絡める。",
+          links: [
+            "豚こま肉",
+            "醤油",
+            "みりん",
+            "しょうが"
+          ]
         }
       ],
-
-      status:"complete",
-      updatedAt:Date.now()
+      status: "complete",
+      updatedAt: Date.now()
     }
   ];
 }
 
-function saveRecipes() {
+
+function saveRecipes(){
+
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify(recipes)
   );
 
-  $("#saveState").textContent = "保存済み";
+  const saveState = $("#saveState");
+
+  if(saveState){
+    saveState.textContent = "保存済み";
+  }
 }
 
-function getEditing() {
-  return recipes.find(
-    r => r.labId === editingId
-  );
-}
 
-function showPage(page) {
-  $("#homePage").classList.toggle(
+/* =================================
+   PAGE CONTROL
+================================= */
+
+function showPage(page){
+
+  const homePage = $("#homePage");
+  const editorPage = $("#editorPage");
+
+  homePage.classList.toggle(
     "is-hidden",
     page !== "home"
   );
 
-  $("#editorPage").classList.toggle(
+  editorPage.classList.toggle(
     "is-hidden",
     page !== "editor"
   );
@@ -222,137 +392,175 @@ function showPage(page) {
   window.scrollTo(0,0);
 }
 
-function renderHome() {
-  const list = $("#recipeList");
 
-  const visible = recipes
-    .filter(
-      r =>
+/* =================================
+   HOME
+================================= */
+
+function renderHome(){
+
+  const list = $("#recipeList");
+  const count = $("#recipeCount");
+
+  const filtered = recipes
+    .filter(recipe => {
+      return (
         filter === "all" ||
-        r.status === filter
-    )
-    .sort(
-      (a,b) =>
+        recipe.status === filter
+      );
+    })
+    .sort((a,b) => {
+      return (
         (b.updatedAt || 0) -
         (a.updatedAt || 0)
-    );
+      );
+    });
 
-  $("#recipeCount").textContent =
-    `${visible.length} RECIPES`;
+  count.textContent =
+    `${filtered.length} RECIPE${filtered.length === 1 ? "" : "S"}`;
 
-  list.innerHTML = "";
-
-  if (!visible.length) {
+  if(!filtered.length){
 
     list.innerHTML = `
       <div class="empty-state">
-        <strong>まだレシピがありません。</strong>
-        新しいレシピを作ってみよう。
+        <strong>レシピがありません</strong>
+        <span>新しいレシピを作ってみましょう。</span>
       </div>
     `;
 
     return;
   }
 
-  visible.forEach((r) => {
+  list.innerHTML = filtered
+    .map(recipe => {
 
-    const index =
-      recipes.indexOf(r) + 1;
+      const originalIndex =
+        recipes.indexOf(recipe);
 
-    const card =
-      document.createElement("article");
+      const number =
+        String(originalIndex + 1).padStart(2,"0");
 
-    card.className =
-      "recipe-card";
+      const statusClass =
+        recipe.status === "complete"
+          ? "complete"
+          : "research";
 
-    card.innerHTML = `
-      <div class="recipe-number">
-        ${String(index).padStart(2,"0")}
-      </div>
+      const statusText =
+        recipe.status === "complete"
+          ? "完成済"
+          : "研究中";
 
-      <h2>
-        ${escapeHtml(
-          r.title || "無題のレシピ"
-        )}
-      </h2>
+      const statusMark =
+        recipe.status === "complete"
+          ? "✓"
+          : "";
 
-      <div class="recipe-card-foot">
+      const servingsText =
+        recipe.servings
+          ? `${recipe.servings}人前`
+          : "";
 
-        <span class="status-badge ${r.status}">
-          ${
-            r.status === "research"
-              ? `<i class="status-dot"></i>研究中`
-              : `<span class="status-check">✓</span>完成済`
-          }
-        </span>
+      return `
+        <article
+          class="recipe-card"
+          data-lab-id="${escapeHtml(recipe.labId)}"
+        >
 
-        <span class="card-meta">
-          ${
-            r.servings
-              ? r.servings + "人前"
-              : "人数未設定"
-          }
-        </span>
+          <div class="recipe-number">
+            #${number}
+          </div>
 
-      </div>
-    `;
+          <h2>
+            ${escapeHtml(recipe.title || "NEW RECIPE")}
+          </h2>
 
-    card.addEventListener(
-      "click",
-      () => openEditor(r.labId)
-    );
+          <div class="recipe-card-foot">
 
-    list.appendChild(card);
+            <span class="status-badge ${statusClass}">
+              ${
+                statusMark
+                  ? `<span class="status-check">${statusMark}</span>`
+                  : `<span class="status-dot"></span>`
+              }
+              ${statusText}
+            </span>
+
+            <span class="card-meta">
+              ${servingsText}
+            </span>
+
+          </div>
+
+        </article>
+      `;
+    })
+    .join("");
+
+  $$(".recipe-card").forEach(card => {
+
+    card.addEventListener("click",() => {
+
+      openEditor(
+        card.dataset.labId
+      );
+
+    });
+
   });
 }
 
-function openEditor(id) {
-  editingId = id;
 
-  const r = getEditing();
+/* =================================
+   FILTER
+================================= */
 
-  if (!r) return;
+function setFilter(nextFilter){
 
-  $("#editorHeading").textContent =
-    r.title || "NEW RECIPE";
+  filter = nextFilter;
 
-  $("#idInput").value =
-    r.id || "";
+  $$(".filter-btn").forEach(button => {
 
-  $("#titleInput").value =
-    r.title || "";
+    button.classList.toggle(
+      "is-active",
+      button.dataset.filter === filter
+    );
 
-  $("#statusSelect").value =
-    r.status || "research";
+  });
 
-  renderImage();
-  renderTags();
-  renderServings();
-  renderIngredients();
-  renderSteps();
-  renderSearchPreview();
+  renderHome();
+}
 
-  $("#codePanel").classList.add(
-    "is-hidden"
+
+/* =================================
+   EDITOR
+================================= */
+
+function getEditingRecipe(){
+
+  return recipes.find(
+    recipe => recipe.labId === editingId
   );
+
+}
+
+
+function openEditor(labId){
+
+  const recipe = recipes.find(
+    item => item.labId === labId
+  );
+
+  if(!recipe) return;
+
+  editingId = labId;
+
+  renderEditor();
 
   showPage("editor");
 }
 
-function newRecipe() {
 
-  const r = blankRecipe();
-
-  recipes.unshift(r);
-
-  saveRecipes();
-
-  openEditor(r.labId);
-
-  $("#idInput").focus();
-}
-
-function closeEditor() {
+function closeEditor(){
 
   saveCurrent();
 
@@ -363,31 +571,1246 @@ function closeEditor() {
   renderHome();
 }
 
-function saveCurrent() {
 
-  const r = getEditing();
+function renderEditor(){
 
-  if (!r) return;
+  const recipe = getEditingRecipe();
 
-  r.id =
+  if(!recipe) return;
+
+  $("#editorHeading").textContent =
+    recipe.title || "NEW RECIPE";
+
+  $("#idInput").value =
+    recipe.id || "";
+
+  $("#titleInput").value =
+    recipe.title || "";
+
+  $("#statusSelect").value =
+    recipe.status || "research";
+
+  renderImage(recipe);
+  renderTags(recipe);
+  renderServings(recipe);
+  renderIngredients(recipe);
+  renderSteps(recipe);
+  updateSearchPreview();
+
+  $("#saveState").textContent =
+    "保存済み";
+
+  $("#codePanel").classList.add(
+    "is-hidden"
+  );
+
+  $("#generatedCode").textContent = "";
+  $("#copyMessage").textContent = "";
+}
+
+
+/* =================================
+   IMAGE
+================================= */
+
+function renderImage(recipe){
+
+  const drop = $("#imageDrop");
+  const preview = $("#imagePreview");
+
+  if(recipe.image){
+
+    preview.src = recipe.image;
+
+    drop.classList.add("has-image");
+
+  }else{
+
+    preview.removeAttribute("src");
+
+    drop.classList.remove("has-image");
+
+  }
+}
+
+
+function handleImageChange(event){
+
+  const file =
+    event.target.files?.[0];
+
+  if(!file) return;
+
+  const reader =
+    new FileReader();
+
+  reader.onload = () => {
+
+    const recipe = getEditingRecipe();
+
+    if(!recipe) return;
+
+    recipe.image =
+      reader.result;
+
+    renderImage(recipe);
+
+    scheduleAutosave();
+  };
+
+  reader.readAsDataURL(file);
+}
+
+
+function removeImage(){
+
+  const recipe = getEditingRecipe();
+
+  if(!recipe) return;
+
+  recipe.image = "";
+
+  $("#imageInput").value = "";
+
+  renderImage(recipe);
+
+  scheduleAutosave();
+}
+
+
+/* =================================
+   TAGS
+================================= */
+
+function renderTags(recipe){
+
+  const list = $("#tagList");
+
+  list.innerHTML =
+    recipe.tags
+      .map((tag,index) => {
+
+        return `
+          <div class="tag-row">
+
+            <input
+              type="text"
+              value="${escapeHtml(tag)}"
+              data-tag-index="${index}"
+              placeholder="タグ"
+              autocomplete="off"
+            >
+
+            <button
+              class="remove-small"
+              type="button"
+              data-remove-tag="${index}"
+              aria-label="タグを削除"
+            >
+              ×
+            </button>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+  $$("#tagList input").forEach(input => {
+
+    input.addEventListener(
+      "input",
+      scheduleAutosave
+    );
+
+  });
+
+  $$("#tagList [data-remove-tag]").forEach(button => {
+
+    button.addEventListener("click",() => {
+
+      const index =
+        Number(button.dataset.removeTag);
+
+      recipe.tags.splice(index,1);
+
+      if(!recipe.tags.length){
+        recipe.tags.push("");
+      }
+
+      renderTags(recipe);
+
+      scheduleAutosave();
+
+    });
+
+  });
+}
+
+
+function addTag(){
+
+  const recipe = getEditingRecipe();
+
+  if(!recipe) return;
+
+  syncCurrentFromDOM();
+
+  recipe.tags.push("");
+
+  renderTags(recipe);
+
+  const inputs =
+    $$("#tagList input");
+
+  inputs.at(-1)?.focus();
+
+  scheduleAutosave();
+}
+
+
+/* =================================
+   SERVINGS
+================================= */
+
+function renderServings(recipe){
+
+  $$("#servingsPicker button").forEach(button => {
+
+    button.classList.toggle(
+      "is-selected",
+      button.dataset.value === String(recipe.servings || "")
+    );
+
+  });
+}
+
+
+function setServings(value){
+
+  const recipe = getEditingRecipe();
+
+  if(!recipe) return;
+
+  recipe.servings = value;
+
+  renderServings(recipe);
+
+  scheduleAutosave();
+}
+
+
+/* =================================
+   INGREDIENTS
+================================= */
+
+function renderIngredients(recipe){
+
+  const list = $("#ingredientList");
+
+  list.innerHTML =
+    recipe.ingredients
+      .map((ingredient,index) => {
+
+        return ingredient.type === "part"
+          ? renderPartRow(ingredient,index)
+          : renderIngredientRow(ingredient,index);
+
+      })
+      .join("");
+
+  bindIngredientEvents();
+
+}
+
+
+function renderIngredientRow(item,index){
+
+  return `
+    <div
+      class="ingredient-row"
+      data-index="${index}"
+    >
+
+      <div
+        class="drag-handle"
+        data-drag-index="${index}"
+        title="ドラッグして並べ替え"
+        aria-label="材料を並べ替え"
+      >
+        ⋮⋮
+      </div>
+
+      <input
+        type="text"
+        data-field="name"
+        value="${escapeHtml(item.name)}"
+        placeholder="材料名"
+        autocomplete="off"
+      >
+
+      <input
+        type="text"
+        data-field="amount"
+        value="${escapeHtml(item.amount)}"
+        placeholder="分量"
+        autocomplete="off"
+      >
+
+      <input
+        type="text"
+        data-field="unit"
+        value="${escapeHtml(item.unit)}"
+        placeholder="単位"
+        autocomplete="off"
+      >
+
+      <button
+        class="remove-row"
+        type="button"
+        data-remove-index="${index}"
+        aria-label="材料を削除"
+      >
+        ×
+      </button>
+
+    </div>
+  `;
+}
+
+
+function renderPartRow(item,index){
+
+  const part =
+    PARTS.find(
+      part => part.id === item.partId
+    );
+
+  const name =
+    part?.name ||
+    item.name ||
+    "パーツ";
+
+  return `
+    <div
+      class="ingredient-row part-row"
+      data-index="${index}"
+    >
+
+      <div
+        class="drag-handle"
+        data-drag-index="${index}"
+        title="ドラッグして並べ替え"
+        aria-label="材料を並べ替え"
+      >
+        ⋮⋮
+      </div>
+
+      <div class="part-name">
+        ${escapeHtml(name)}
+      </div>
+
+      <input
+        type="text"
+        data-field="amount"
+        value="${escapeHtml(item.amount)}"
+        placeholder="分量"
+        autocomplete="off"
+      >
+
+      <input
+        type="text"
+        data-field="unit"
+        value="${escapeHtml(item.unit)}"
+        placeholder="単位"
+        autocomplete="off"
+      >
+
+      <button
+        class="remove-row"
+        type="button"
+        data-remove-index="${index}"
+        aria-label="パーツを削除"
+      >
+        ×
+      </button>
+
+    </div>
+  `;
+}
+
+
+function bindIngredientEvents(){
+
+  const recipe = getEditingRecipe();
+
+  if(!recipe) return;
+
+  $$("#ingredientList .ingredient-row").forEach(row => {
+
+    const index =
+      Number(row.dataset.index);
+
+    row.querySelectorAll("input").forEach(input => {
+
+      input.addEventListener(
+        "input",
+        () => {
+
+          syncIngredientRow(
+            recipe,
+            row,
+            index
+          );
+
+          scheduleAutosave();
+
+        }
+      );
+
+    });
+
+  });
+
+
+  $$("#ingredientList [data-remove-index]").forEach(button => {
+
+    button.addEventListener("click",() => {
+
+      const index =
+        Number(button.dataset.removeIndex);
+
+      recipe.ingredients.splice(index,1);
+
+      if(!recipe.ingredients.length){
+
+        recipe.ingredients.push({
+          type:"ingredient",
+          name:"",
+          amount:"",
+          unit:""
+        });
+
+      }
+
+      renderIngredients(recipe);
+
+      scheduleAutosave();
+
+    });
+
+  });
+
+
+  $$("#ingredientList [data-drag-index]").forEach(handle => {
+
+    bindDrag(handle);
+
+  });
+}
+
+
+function syncIngredientRow(recipe,row,index){
+
+  const item =
+    recipe.ingredients[index];
+
+  if(!item) return;
+
+  row.querySelectorAll("input").forEach(input => {
+
+    const field =
+      input.dataset.field;
+
+    if(field){
+      item[field] =
+        input.value;
+    }
+
+  });
+}
+
+
+function addIngredient(){
+
+  const recipe = getEditingRecipe();
+
+  if(!recipe) return;
+
+  syncCurrentFromDOM();
+
+  recipe.ingredients.push({
+    type:"ingredient",
+    name:"",
+    amount:"",
+    unit:""
+  });
+
+  renderIngredients(recipe);
+
+  const rows =
+    $$("#ingredientList .ingredient-row");
+
+  rows.at(-1)
+    ?.querySelector('input[data-field="name"]')
+    ?.focus();
+
+  scheduleAutosave();
+}
+
+
+/* =================================
+   PARTS
+================================= */
+
+function addPart(){
+
+  openPartModal();
+}
+
+
+function openPartModal(){
+
+  const existing =
+    $("#partModal");
+
+  existing?.remove();
+
+  const modal =
+    document.createElement("div");
+
+  modal.id = "partModal";
+  modal.className = "modal-backdrop";
+
+  modal.innerHTML = `
+    <div class="modal">
+
+      <h3>パーツを追加</h3>
+
+      <div class="part-options">
+
+        ${PARTS.map(part => `
+          <button
+            type="button"
+            class="part-option"
+            data-part-id="${escapeHtml(part.id)}"
+          >
+
+            <strong>
+              ${escapeHtml(part.name)}
+            </strong>
+
+            <span>
+              ${escapeHtml(part.yieldAmount)}${escapeHtml(part.yieldUnit)}
+            </span>
+
+          </button>
+        `).join("")}
+
+      </div>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="cancel-btn"
+          data-modal-cancel
+        >
+          キャンセル
+        </button>
+
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal
+    .querySelector("[data-modal-cancel]")
+    .addEventListener(
+      "click",
+      () => modal.remove()
+    );
+
+  modal.addEventListener("click",event => {
+
+    if(event.target === modal){
+      modal.remove();
+    }
+
+  });
+
+  modal
+    .querySelectorAll("[data-part-id]")
+    .forEach(button => {
+
+      button.addEventListener("click",() => {
+
+        const part =
+          PARTS.find(
+            item =>
+              item.id ===
+              button.dataset.partId
+          );
+
+        if(!part) return;
+
+        const recipe =
+          getEditingRecipe();
+
+        if(!recipe) return;
+
+        syncCurrentFromDOM();
+
+        recipe.ingredients.push({
+          type:"part",
+          partId:part.id,
+          name:part.name,
+          amount:part.yieldAmount,
+          unit:part.yieldUnit
+        });
+
+        modal.remove();
+
+        renderIngredients(recipe);
+
+        scheduleAutosave();
+
+      });
+
+    });
+}
+
+
+/* =================================
+   STEPS
+================================= */
+
+function renderSteps(recipe){
+
+  const list = $("#stepList");
+
+  list.innerHTML =
+    recipe.steps
+      .map((step,index) =>
+        renderStepRow(step,index)
+      )
+      .join("");
+
+  bindStepEvents();
+}
+
+
+function renderStepRow(step,index){
+
+  const links =
+    normalizeArray(step.links);
+
+  const chips =
+    links
+      .map(name => `
+        <span class="linked-chip">
+          ${escapeHtml(name)}
+        </span>
+      `)
+      .join("");
+
+  return `
+    <div
+      class="step-row"
+      data-step-index="${index}"
+    >
+
+      <div class="step-number">
+        ${index + 1}
+      </div>
+
+      <div class="step-body">
+
+        <textarea
+          data-step-text
+          placeholder="手順を入力"
+        >${escapeHtml(step.text)}</textarea>
+
+        <div class="link-summary">
+          ${chips}
+        </div>
+
+        <button
+          type="button"
+          class="link-btn"
+          data-link-step="${index}"
+        >
+          材料を指定
+        </button>
+
+      </div>
+
+      <button
+        type="button"
+        class="remove-row"
+        data-remove-step="${index}"
+        aria-label="手順を削除"
+      >
+        ×
+      </button>
+
+    </div>
+  `;
+}
+
+
+function bindStepEvents(){
+
+  $$("#stepList .step-row").forEach(row => {
+
+    const index =
+      Number(row.dataset.stepIndex);
+
+    const textarea =
+      row.querySelector("[data-step-text]");
+
+    textarea.addEventListener(
+      "input",
+      () => {
+
+        const recipe =
+          getEditingRecipe();
+
+        if(!recipe) return;
+
+        if(recipe.steps[index]){
+          recipe.steps[index].text =
+            textarea.value;
+        }
+
+        updateSearchPreview();
+
+        scheduleAutosave();
+
+      }
+    );
+
+  });
+
+
+  $$("#stepList [data-link-step]").forEach(button => {
+
+    button.addEventListener("click",() => {
+
+      openIngredientLinkModal(
+        Number(button.dataset.linkStep)
+      );
+
+    });
+
+  });
+
+
+  $$("#stepList [data-remove-step]").forEach(button => {
+
+    button.addEventListener("click",() => {
+
+      const recipe =
+        getEditingRecipe();
+
+      if(!recipe) return;
+
+      const index =
+        Number(button.dataset.removeStep);
+
+      recipe.steps.splice(index,1);
+
+      if(!recipe.steps.length){
+
+        recipe.steps.push({
+          text:"",
+          links:[]
+        });
+
+      }
+
+      renderSteps(recipe);
+
+      scheduleAutosave();
+
+    });
+
+  });
+}
+
+
+function addStep(){
+
+  const recipe = getEditingRecipe();
+
+  if(!recipe) return;
+
+  syncCurrentFromDOM();
+
+  recipe.steps.push({
+    text:"",
+    links:[]
+  });
+
+  renderSteps(recipe);
+
+  const textareas =
+    $$("#stepList textarea");
+
+  textareas.at(-1)?.focus();
+
+  scheduleAutosave();
+}
+
+
+/* =================================
+   MATERIAL LINK
+   ※ 複数選択対応
+================================= */
+
+function openIngredientLinkModal(stepIndex){
+
+  const recipe =
+    getEditingRecipe();
+
+  if(!recipe) return;
+
+  const step =
+    recipe.steps[stepIndex];
+
+  if(!step) return;
+
+  const ingredients =
+    recipe.ingredients.filter(
+      item =>
+        item.type !== "part" &&
+        item.name.trim()
+    );
+
+  if(!ingredients.length){
+
+    showToast(
+      "先に材料を追加してください"
+    );
+
+    return;
+  }
+
+  const existingLinks =
+    new Set(
+      normalizeArray(step.links)
+    );
+
+  const modal =
+    document.createElement("div");
+
+  modal.className =
+    "modal-backdrop";
+
+  modal.innerHTML = `
+    <div class="modal">
+
+      <h3>手順に材料を指定</h3>
+
+      <div class="part-options">
+
+        ${ingredients.map(ingredient => {
+
+          const selected =
+            existingLinks.has(
+              ingredient.name
+            );
+
+          return `
+            <button
+              type="button"
+              class="part-option ${selected ? "selected" : ""}"
+              data-link-name="${escapeHtml(ingredient.name)}"
+            >
+
+              <strong>
+                ${escapeHtml(ingredient.name)}
+              </strong>
+
+              <span>
+                ${escapeHtml(ingredient.amount)}
+                ${escapeHtml(ingredient.unit)}
+              </span>
+
+            </button>
+          `;
+
+        }).join("")}
+
+      </div>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="cancel-btn"
+          data-modal-cancel
+        >
+          キャンセル
+        </button>
+
+        <button
+          type="button"
+          class="confirm-btn"
+          data-modal-confirm
+        >
+          決定
+        </button>
+
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+
+  const selected =
+    new Set(existingLinks);
+
+
+  modal
+    .querySelectorAll("[data-link-name]")
+    .forEach(button => {
+
+      button.addEventListener("click",() => {
+
+        const name =
+          button.dataset.linkName;
+
+        if(selected.has(name)){
+
+          selected.delete(name);
+
+          button.classList.remove(
+            "selected"
+          );
+
+        }else{
+
+          selected.add(name);
+
+          button.classList.add(
+            "selected"
+          );
+
+        }
+
+      });
+
+    });
+
+
+  modal
+    .querySelector("[data-modal-cancel]")
+    .addEventListener(
+      "click",
+      () => modal.remove()
+    );
+
+
+  modal
+    .querySelector("[data-modal-confirm]")
+    .addEventListener("click",() => {
+
+      step.links =
+        [...selected];
+
+      renderSteps(recipe);
+
+      scheduleAutosave();
+
+      modal.remove();
+
+    });
+
+
+  modal.addEventListener("click",event => {
+
+    if(event.target === modal){
+      modal.remove();
+    }
+
+  });
+}
+
+
+/* =================================
+   DRAG SORT
+================================= */
+
+function bindDrag(handle){
+
+  let startY = 0;
+  let startIndex = null;
+
+  const onPointerDown = event => {
+
+    const recipe =
+      getEditingRecipe();
+
+    if(!recipe) return;
+
+    startY =
+      event.clientY;
+
+    startIndex =
+      Number(handle.dataset.dragIndex);
+
+    handle.setPointerCapture?.(
+      event.pointerId
+    );
+
+    handle.style.opacity = ".45";
+  };
+
+
+  const onPointerMove = event => {
+
+    if(startIndex === null) return;
+
+    const row =
+      handle.closest(".ingredient-row");
+
+    if(!row) return;
+
+    const currentIndex =
+      Number(row.dataset.index);
+
+    const delta =
+      event.clientY - startY;
+
+    if(Math.abs(delta) < 20){
+      return;
+    }
+
+    const rows =
+      $$("#ingredientList .ingredient-row");
+
+    const targetRow =
+      rows.find(other => {
+
+        const index =
+          Number(other.dataset.index);
+
+        if(index === currentIndex){
+          return false;
+        }
+
+        const rect =
+          other.getBoundingClientRect();
+
+        return (
+          event.clientY >
+            rect.top &&
+          event.clientY <
+            rect.bottom
+        );
+
+      });
+
+    if(!targetRow) return;
+
+    const targetIndex =
+      Number(targetRow.dataset.index);
+
+    if(targetIndex === startIndex){
+      return;
+    }
+
+    const recipe =
+      getEditingRecipe();
+
+    if(!recipe) return;
+
+    const [moved] =
+      recipe.ingredients.splice(
+        startIndex,
+        1
+      );
+
+    recipe.ingredients.splice(
+      targetIndex,
+      0,
+      moved
+    );
+
+    startIndex = targetIndex;
+
+    renderIngredients(recipe);
+
+    scheduleAutosave();
+
+    const newHandle =
+      $$("#ingredientList [data-drag-index]")[startIndex];
+
+    newHandle?.setPointerCapture?.(
+      event.pointerId
+    );
+
+    newHandle?.focus?.();
+  };
+
+
+  const onPointerUp = () => {
+
+    handle.style.opacity = "";
+
+    startIndex = null;
+  };
+
+
+  handle.addEventListener(
+    "pointerdown",
+    onPointerDown
+  );
+
+  handle.addEventListener(
+    "pointermove",
+    onPointerMove
+  );
+
+  handle.addEventListener(
+    "pointerup",
+    onPointerUp
+  );
+
+  handle.addEventListener(
+    "pointercancel",
+    onPointerUp
+  );
+}
+
+
+/* =================================
+   DOM → STATE
+================================= */
+
+function syncCurrentFromDOM(){
+
+  const recipe =
+    getEditingRecipe();
+
+  if(!recipe) return;
+
+
+  recipe.id =
     $("#idInput").value.trim();
 
-  r.title =
+  recipe.title =
     $("#titleInput").value.trim();
 
-  r.status =
+  recipe.status =
     $("#statusSelect").value;
 
-  r.updatedAt =
+
+  recipe.tags =
+    $$("#tagList input")
+      .map(input =>
+        input.value.trim()
+      );
+
+
+  if(!recipe.tags.length){
+    recipe.tags = [""];
+  }
+
+
+  $$("#ingredientList .ingredient-row")
+    .forEach(row => {
+
+      const index =
+        Number(row.dataset.index);
+
+      const item =
+        recipe.ingredients[index];
+
+      if(!item) return;
+
+      row.querySelectorAll("input")
+        .forEach(input => {
+
+          const field =
+            input.dataset.field;
+
+          if(field){
+            item[field] =
+              input.value;
+          }
+
+        });
+
+    });
+
+
+  $$("#stepList .step-row")
+    .forEach(row => {
+
+      const index =
+        Number(row.dataset.stepIndex);
+
+      const step =
+        recipe.steps[index];
+
+      if(!step) return;
+
+      const textarea =
+        row.querySelector(
+          "[data-step-text]"
+        );
+
+      if(textarea){
+        step.text =
+          textarea.value;
+      }
+
+      step.links =
+        [...row.querySelectorAll(".linked-chip")]
+          .map(chip =>
+            chip.textContent.trim()
+          );
+
+    });
+
+
+  recipe.updatedAt =
     Date.now();
+
+}
+
+
+/* =================================
+   SAVE / AUTOSAVE
+================================= */
+
+function saveCurrent(){
+
+  if(!editingId) return;
+
+  syncCurrentFromDOM();
 
   saveRecipes();
 }
 
-function scheduleSave() {
 
-  $("#saveState").textContent =
-    "保存中…";
+function scheduleAutosave(){
+
+  if(!editingId) return;
+
+  const saveState =
+    $("#saveState");
+
+  if(saveState){
+    saveState.textContent =
+      "保存中…";
+  }
 
   clearTimeout(
     autosaveTimer
@@ -396,1342 +1819,61 @@ function scheduleSave() {
   autosaveTimer =
     setTimeout(() => {
 
-      syncCurrentFromDOM();
-
       saveCurrent();
 
-    }, 500);
+    },500);
 }
 
-function syncCurrentFromDOM() {
 
-  const r = getEditing();
+/* =================================
+   NEW RECIPE
+================================= */
 
-  if (!r) return;
+function newRecipe(){
 
-  r.id =
-    $("#idInput").value.trim();
+  const recipe =
+    blankRecipe();
 
-  r.title =
-    $("#titleInput").value.trim();
+  recipes.unshift(recipe);
 
-  r.status =
-    $("#statusSelect").value;
+  saveRecipes();
 
-  r.tags =
-    $$("#tagList input")
-      .map(i => i.value.trim());
+  openEditor(recipe.labId);
 
-  r.servings =
-    $(".servings-picker button.is-selected")
-      ?.dataset.value || "";
+  setTimeout(() => {
 
-  r.ingredients =
-    $$("#ingredientList .ingredient-row")
-      .map(row => {
+    $("#idInput")?.focus();
 
-        if (
-          row.dataset.type === "part"
-        ) {
-
-          return {
-            type:"part",
-
-            partId:
-              row.dataset.partId,
-
-            amount:
-              row.querySelector(
-                ".part-amount"
-              )?.value.trim() || "",
-
-            unit:
-              row.querySelector(
-                ".part-unit"
-              )?.value.trim() || ""
-          };
-        }
-
-        const inputs =
-          row.querySelectorAll("input");
-
-        return {
-          type:"ingredient",
-
-          name:
-            inputs[0].value.trim(),
-
-          amount:
-            inputs[1].value.trim(),
-
-          unit:
-            inputs[2].value.trim()
-        };
-      });
-
-  r.steps =
-    $$("#stepList .step-row")
-      .map(row => ({
-        text:
-          row.querySelector(
-            "textarea"
-          ).value,
-
-        links:
-          [
-            ...row.querySelectorAll(
-              ".linked-chip"
-            )
-          ]
-            .map(
-              c => c.dataset.name
-            )
-      }));
-
-  renderSearchPreview();
+  },50);
 }
 
-function renderTags() {
 
-  const r = getEditing();
+/* =================================
+   DELETE
+================================= */
 
-  const box =
-    $("#tagList");
+function deleteRecipe(){
 
-  box.innerHTML = "";
+  const recipe =
+    getEditingRecipe();
 
-  (
-    r.tags?.length
-      ? r.tags
-      : [""]
-  ).forEach((tag, i) => {
+  if(!recipe) return;
 
-    const row =
-      document.createElement("div");
+  const title =
+    recipe.title ||
+    "このレシピ";
 
-    row.className =
-      "tag-row";
-
-    row.innerHTML = `
-      <input
-        value="${escapeAttr(tag)}"
-        placeholder="タグを入力"
-        aria-label="タグ ${i+1}"
-      >
-
-      <button
-        class="remove-small"
-        type="button"
-        aria-label="タグ削除"
-      >×</button>
-    `;
-
-    row.querySelector("input")
-      .addEventListener(
-        "input",
-        scheduleSave
-      );
-
-    row.querySelector(
-      ".remove-small"
-    ).addEventListener(
-      "click",
-      () => {
-
-        if (
-          $$("#tagList .tag-row")
-            .length === 1
-        ) {
-
-          row.querySelector(
-            "input"
-          ).value = "";
-
-        } else {
-
-          row.remove();
-
-        }
-
-        scheduleSave();
-      }
+  const confirmed =
+    window.confirm(
+      `「${title}」を削除しますか？`
     );
 
-    box.appendChild(row);
-  });
-}
-
-function renderServings() {
-
-  const r = getEditing();
-
-  $$("#servingsPicker button")
-    .forEach(b =>
-      b.classList.toggle(
-        "is-selected",
-        b.dataset.value ===
-          String(r.servings || "")
-      )
-    );
-}
-
-function renderImage() {
-
-  const r = getEditing();
-
-  const box =
-    $("#imageDrop");
-
-  const img =
-    $("#imagePreview");
-
-  if (r.image) {
-
-    img.src =
-      r.image;
-
-    box.classList.add(
-      "has-image"
-    );
-
-  } else {
-
-    img.removeAttribute(
-      "src"
-    );
-
-    box.classList.remove(
-      "has-image"
-    );
-  }
-}
-
-function renderIngredients() {
-
-  const r = getEditing();
-
-  const list =
-    $("#ingredientList");
-
-  list.innerHTML = "";
-
-  (
-    r.ingredients?.length
-      ? r.ingredients
-      : [
-          {
-            type:"ingredient",
-            name:"",
-            amount:"",
-            unit:""
-          }
-        ]
-  ).forEach(item => {
-
-    if (
-      item.type === "part"
-    ) {
-
-      addPartRow(
-        item,
-        false
-      );
-
-    } else {
-
-      addIngredientRow(
-        item,
-        false
-      );
-    }
-  });
-}
-
-function addIngredientRow(
-  data={
-    name:"",
-    amount:"",
-    unit:""
-  },
-  focus=true
-) {
-
-  const row =
-    document.createElement("div");
-
-  row.className =
-    "ingredient-row";
-
-  row.dataset.type =
-    "ingredient";
-
-  row.innerHTML = `
-    <span
-      class="drag-handle"
-      title="ドラッグして並び替え"
-    >≡</span>
-
-    <input
-      placeholder="材料名"
-      value="${escapeAttr(
-        data.name || ""
-      )}"
-    >
-
-    <input
-      placeholder="分量"
-      value="${escapeAttr(
-        data.amount || ""
-      )}"
-    >
-
-    <input
-      placeholder="単位"
-      value="${escapeAttr(
-        data.unit || ""
-      )}"
-    >
-
-    <button
-      class="remove-row"
-      type="button"
-    >×</button>
-  `;
-
-  row.querySelectorAll("input")
-    .forEach(i =>
-      i.addEventListener(
-        "input",
-        scheduleSave
-      )
-    );
-
-  row.querySelector(
-    ".remove-row"
-  ).addEventListener(
-    "click",
-    () => {
-
-      row.remove();
-
-      scheduleSave();
-    }
-  );
-
-  bindDrag(row);
-
-  $("#ingredientList")
-    .appendChild(row);
-
-  if (focus) {
-
-    row.querySelector(
-      "input"
-    ).focus();
-  }
-}
-
-function addPartRow(
-  data={
-    partId:PARTS[0].id,
-    amount:"",
-    unit:""
-  },
-  save=true
-) {
-
-  const part =
-    PARTS.find(
-      p =>
-        p.id === data.partId
-    ) || PARTS[0];
-
-  const row =
-    document.createElement("div");
-
-  row.className =
-    "ingredient-row part-row";
-
-  row.dataset.type =
-    "part";
-
-  row.dataset.partId =
-    part.id;
-
-  const unit =
-    data.unit !== undefined
-      ? data.unit
-      : part.yieldUnit;
-
-  row.innerHTML = `
-    <span
-      class="drag-handle"
-      title="ドラッグして並び替え"
-    >≡</span>
-
-    <div class="part-name">
-      ${escapeHtml(part.name)}
-    </div>
-
-    <input
-      class="part-amount"
-      placeholder="分量"
-      value="${escapeAttr(
-        data.amount || ""
-      )}"
-    >
-
-    <input
-      class="part-unit"
-      placeholder="単位"
-      value="${escapeAttr(
-        unit || ""
-      )}"
-    >
-
-    <button
-      class="remove-row"
-      type="button"
-    >×</button>
-  `;
-
-  row.querySelector(
-    ".part-amount"
-  ).addEventListener(
-    "input",
-    scheduleSave
-  );
-
-  row.querySelector(
-    ".part-unit"
-  ).addEventListener(
-    "input",
-    scheduleSave
-  );
-
-  row.querySelector(
-    ".remove-row"
-  ).addEventListener(
-    "click",
-    () => {
-
-      row.remove();
-
-      scheduleSave();
-    }
-  );
-
-  bindDrag(row);
-
-  $("#ingredientList")
-    .appendChild(row);
-
-  if (save) {
-    scheduleSave();
-  }
-}
-
-function renderSteps() {
-
-  const r =
-    getEditing();
-
-  const list =
-    $("#stepList");
-
-  list.innerHTML = "";
-
-  (
-    r.steps?.length
-      ? r.steps
-      : [
-          {
-            text:"",
-            links:[]
-          }
-        ]
-  ).forEach(
-    (step,i) =>
-      addStepRow(
-        step,
-        i,
-        false
-      )
-  );
-}
-
-function addStepRow(
-  data={
-    text:"",
-    links:[]
-  },
-  index=null,
-  focus=true
-) {
-
-  const row =
-    document.createElement("div");
-
-  row.className =
-    "step-row";
-
-  row.innerHTML = `
-    <div class="step-number">
-      ${
-        index === null
-          ? $$("#stepList .step-row").length + 1
-          : index + 1
-      }
-    </div>
-
-    <div class="step-body">
-
-      <textarea
-        placeholder="手順"
-      >${escapeHtml(
-        data.text || ""
-      )}</textarea>
-
-      <div class="link-summary">
-
-        ${
-          (data.links || [])
-            .map(
-              n =>
-                `<span
-                  class="linked-chip"
-                  data-name="${escapeAttr(n)}"
-                >${escapeHtml(n)}</span>`
-            )
-            .join("")
-        }
-
-      </div>
-
-      <button
-        class="link-btn"
-        type="button"
-      >材料を指定</button>
-
-    </div>
-
-    <button
-      class="remove-row"
-      type="button"
-    >×</button>
-  `;
-
-  row.querySelector(
-    "textarea"
-  ).addEventListener(
-    "input",
-    scheduleSave
-  );
-
-  row.querySelector(
-    ".remove-row"
-  ).addEventListener(
-    "click",
-    () => {
-
-      row.remove();
-
-      renumberSteps();
-
-      scheduleSave();
-    }
-  );
-
-  row.querySelector(
-    ".link-btn"
-  ).addEventListener(
-    "click",
-    () =>
-      openIngredientLinkModal(row)
-  );
-
-  $("#stepList")
-    .appendChild(row);
-
-  if (focus) {
-
-    row.querySelector(
-      "textarea"
-    ).focus();
-  }
-}
-
-function renumberSteps() {
-
-  $$("#stepList .step-number")
-    .forEach(
-      (n,i) =>
-        n.textContent = i + 1
-    );
-}
-
-
-/* =========================================
-   手順に材料を指定
-   複数選択対応版
-   ========================================= */
-
-function openIngredientLinkModal(row) {
-
-  const r =
-    getEditing();
-
-  if (!r) return;
-
-  /*
-   * 現在この手順に指定されている材料
-   */
-  const existing =
-    [
-      ...row.querySelectorAll(
-        ".linked-chip"
-      )
-    ]
-      .map(
-        c => c.dataset.name
-      );
-
-  /*
-   * 選択状態を Set で管理する。
-   *
-   * Set にすることで、
-   * 何個でも追加・削除できる。
-   */
-  const selected =
-    new Set(existing);
-
-  /*
-   * 通常の材料だけを対象にする。
-   * パーツはここでは対象外。
-   */
-  const ingredients =
-    (r.ingredients || [])
-      .filter(
-        x =>
-          x.type === "ingredient" &&
-          x.name
-      );
-
-  const backdrop =
-    document.createElement("div");
-
-  backdrop.className =
-    "modal-backdrop";
-
-  backdrop.innerHTML = `
-    <div class="modal">
-
-      <h3>
-        手順に材料を指定
-      </h3>
-
-      <p class="help">
-        この手順で使う材料を選択してください。複数選択できます。
-      </p>
-
-      <div id="linkOptions"></div>
-
-      <div class="modal-actions">
-
-        <button
-          class="cancel-btn"
-          type="button"
-        >キャンセル</button>
-
-        <button
-          class="confirm-btn"
-          type="button"
-        >指定する</button>
-
-      </div>
-
-    </div>
-  `;
-
-  const options =
-    backdrop.querySelector(
-      "#linkOptions"
-    );
-
-  /*
-   * 材料一覧を作る
-   */
-  ingredients.forEach(
-    item => {
-
-      const name =
-        item.name.trim();
-
-      const b =
-        document.createElement(
-          "button"
-        );
-
-      b.type =
-        "button";
-
-      b.className =
-        "part-option";
-
-      b.dataset.name =
-        name;
-
-      b.innerHTML = `
-        <strong>
-          ${escapeHtml(name)}
-        </strong>
-
-        <span>
-          ${escapeHtml(
-            (item.amount || "") +
-            (item.unit || "")
-          )}
-        </span>
-      `;
-
-      /*
-       * すでに指定されている材料は
-       * 最初から選択状態にする
-       */
-      if (
-        selected.has(name)
-      ) {
-
-        b.classList.add(
-          "selected"
-        );
-      }
-
-      /*
-       * クリックで
-       *
-       * 未選択 → 選択
-       * 選択中 → 解除
-       *
-       * を切り替える。
-       */
-      b.addEventListener(
-        "click",
-        () => {
-
-          if (
-            selected.has(name)
-          ) {
-
-            selected.delete(name);
-
-            b.classList.remove(
-              "selected"
-            );
-
-          } else {
-
-            selected.add(name);
-
-            b.classList.add(
-              "selected"
-            );
-          }
-        }
-      );
-
-      options.appendChild(b);
-    }
-  );
-
-  /*
-   * キャンセル
-   *
-   * 選択状態を保存せず閉じる。
-   */
-  backdrop.querySelector(
-    ".cancel-btn"
-  ).addEventListener(
-    "click",
-    () => {
-
-      backdrop.remove();
-    }
-  );
-
-  /*
-   * 指定する
-   */
-  backdrop.querySelector(
-    ".confirm-btn"
-  ).addEventListener(
-    "click",
-    () => {
-
-      /*
-       * Set → Array
-       */
-      const selectedNames =
-        [...selected];
-
-      /*
-       * 手順の材料チップを更新
-       */
-      row.querySelector(
-        ".link-summary"
-      ).innerHTML =
-        selectedNames
-          .map(
-            n =>
-              `<span
-                class="linked-chip"
-                data-name="${escapeAttr(n)}"
-              >${escapeHtml(n)}</span>`
-          )
-          .join("");
-
-      /*
-       * モーダルを閉じる
-       */
-      backdrop.remove();
-
-      /*
-       * autosave
-       *
-       * syncCurrentFromDOM() が
-       * linked-chip を読み取って
-       * step.links に保存する。
-       */
-      scheduleSave();
-    }
-  );
-
-  /*
-   * 画面に表示
-   */
-  document.body.appendChild(
-    backdrop
-  );
-}
-
-function addTag() {
-
-  const row =
-    document.createElement("div");
-
-  row.className =
-    "tag-row";
-
-  row.innerHTML = `
-    <input
-      placeholder="タグを入力"
-    >
-
-    <button
-      class="remove-small"
-      type="button"
-    >×</button>
-  `;
-
-  row.querySelector(
-    "input"
-  ).addEventListener(
-    "input",
-    scheduleSave
-  );
-
-  row.querySelector(
-    ".remove-small"
-  ).addEventListener(
-    "click",
-    () => {
-
-      row.remove();
-
-      scheduleSave();
-    }
-  );
-
-  $("#tagList")
-    .appendChild(row);
-
-  row.querySelector(
-    "input"
-  ).focus();
-}
-
-function generateCode() {
-
-  syncCurrentFromDOM();
-
-  const r =
-    getEditing();
-
-  if (!r.id) {
-
-    toast(
-      "IDを入力してください"
-    );
-
-    $("#idInput").focus();
-
-    return;
-  }
-
-  if (!r.title) {
-
-    toast(
-      "タイトルを入力してください"
-    );
-
-    $("#titleInput").focus();
-
-    return;
-  }
-
-  const tags =
-    (r.tags || [])
-      .filter(Boolean);
-
-  const search = [
-    ...tags,
-
-    ...r.ingredients
-      .filter(
-        x =>
-          x.type === "ingredient"
-      )
-      .map(
-        x => x.name
-      )
-      .filter(Boolean)
-
-  ].join(" ");
-
-  const ingredients =
-    r.ingredients.map(
-      x => {
-
-        if (
-          x.type === "part"
-        ) {
-
-          const p =
-            PARTS.find(
-              p =>
-                p.id === x.partId
-            );
-
-          return `["${esc(
-            p?.name || ""
-          )}","${esc(
-            (x.amount || "") +
-            (x.unit || "")
-          )}"]`;
-        }
-
-        return `["${esc(
-          x.name || ""
-        )}","${esc(
-          (x.amount || "") +
-          (x.unit || "")
-        )}"]`;
-      }
-    );
-
-  const steps =
-    r.steps.map(
-      s =>
-        `"${esc(
-          s.text || ""
-        )}"`
-    );
-
-  const code = `{
-    id: "${esc(r.id)}",
-    name: "${esc(r.title)}",
-    servings: ${
-      r.servings
-        ? Number(r.servings)
-        : "null"
-    },
-    image: "${esc(
-      r.image || ""
-    )}",
-    tags: [
-      ${tags.map(
-        t => `"${esc(t)}"`
-      ).join(", ")}
-    ],
-    searchText: "${esc(search)}",
-    ingredients: [
-      ${ingredients.join(",\n      ")}
-    ],
-    steps: [
-      ${steps.join(",\n      ")}
-    ]
-  },`;
-
-  $("#generatedCode")
-    .textContent = code;
-
-  $("#codePanel")
-    .classList.remove(
-      "is-hidden"
-    );
-
-  $("#codePanel")
-    .scrollIntoView({
-      behavior:"smooth",
-      block:"start"
-    });
-}
-
-function renderSearchPreview() {
-
-  const r =
-    getEditing();
-
-  if (!r) return;
-
-  const tags =
-    (r.tags || [])
-      .filter(Boolean);
-
-  const names =
-    (r.ingredients || [])
-      .filter(
-        x =>
-          x.type === "ingredient"
-      )
-      .map(
-        x => x.name
-      )
-      .filter(Boolean);
-
-  $("#searchTextPreview")
-    .textContent =
-      [
-        ...tags,
-        ...names
-      ].join(" ") ||
-      "タグ・材料を入力すると自動生成されます。";
-}
-
-
-/* =========================================
-   材料のドラッグ並び替え
-   ========================================= */
-
-function bindDrag(row) {
-
-  const handle =
-    row.querySelector(
-      ".drag-handle"
-    );
-
-  if (!handle) return;
-
-  let dragging = false;
-  let startY = 0;
-  let startTop = 0;
-  let placeholder = null;
-
-  handle.addEventListener(
-    "pointerdown",
-    (e) => {
-
-      e.preventDefault();
-
-      handle.setPointerCapture?.(
-        e.pointerId
-      );
-
-      startY =
-        e.clientY;
-
-      const move =
-        (ev) => {
-
-          ev.preventDefault();
-
-          const distance =
-            Math.abs(
-              ev.clientY -
-              startY
-            );
-
-          if (!dragging) {
-
-            if (distance < 8) {
-              return;
-            }
-
-            dragging = true;
-
-            const rect =
-              row.getBoundingClientRect();
-
-            startTop =
-              rect.top;
-
-            placeholder =
-              document.createElement(
-                "div"
-              );
-
-            placeholder.className =
-              "ingredient-placeholder";
-
-            placeholder.style.height =
-              `${rect.height}px`;
-
-            placeholder.style.borderRadius =
-              "9px";
-
-            placeholder.style.border =
-              "1px dashed var(--line)";
-
-            placeholder.style.background =
-              "rgba(143,175,114,.08)";
-
-            placeholder.style.boxSizing =
-              "border-box";
-
-            row.parentNode.insertBefore(
-              placeholder,
-              row
-            );
-
-            row.classList.add(
-              "is-dragging"
-            );
-
-            row.style.width =
-              `${rect.width}px`;
-
-            row.style.position =
-              "fixed";
-
-            row.style.left =
-              `${rect.left}px`;
-
-            row.style.top =
-              `${startTop}px`;
-
-            row.style.zIndex =
-              "1000";
-
-            row.style.transition =
-              "box-shadow .15s ease, transform .15s ease";
-
-            row.style.boxShadow =
-              "0 14px 32px rgba(40,40,35,.20)";
-
-            row.style.transform =
-              "scale(1.025)";
-
-            document.body.style.userSelect =
-              "none";
-
-            document.body.style.webkitUserSelect =
-              "none";
-          }
-
-          const offset =
-            ev.clientY -
-            startY;
-
-          row.style.transform =
-            `translateY(${offset}px) scale(1.025)`;
-
-          const list =
-            $("#ingredientList");
-
-          const rows =
-            [
-              ...list.querySelectorAll(
-                ".ingredient-row:not(.is-dragging)"
-              )
-            ];
-
-          const currentY =
-            ev.clientY;
-
-          for (
-            const target of rows
-          ) {
-
-            const rect =
-              target.getBoundingClientRect();
-
-            const middle =
-              rect.top +
-              rect.height / 2;
-
-            if (
-              currentY <
-              middle
-            ) {
-
-              if (
-                placeholder !==
-                target.previousElementSibling
-              ) {
-
-                list.insertBefore(
-                  placeholder,
-                  target
-                );
-              }
-
-              return;
-            }
-          }
-
-          if (rows.length) {
-
-            const last =
-              rows[
-                rows.length - 1
-              ];
-
-            if (
-              placeholder !==
-              last.nextElementSibling
-            ) {
-
-              list.appendChild(
-                placeholder
-              );
-            }
-          }
-        };
-
-      const finish =
-        () => {
-
-          if (dragging) {
-
-            if (placeholder) {
-
-              placeholder.parentNode.insertBefore(
-                row,
-                placeholder
-              );
-
-              placeholder.remove();
-
-              placeholder = null;
-            }
-
-            row.classList.remove(
-              "is-dragging"
-            );
-
-            row.style.width = "";
-            row.style.position = "";
-            row.style.left = "";
-            row.style.top = "";
-            row.style.zIndex = "";
-            row.style.transform = "";
-            row.style.transition = "";
-            row.style.boxShadow = "";
-
-            document.body.style.userSelect =
-              "";
-
-            document.body.style.webkitUserSelect =
-              "";
-
-            scheduleSave();
-          }
-
-          dragging = false;
-
-          handle.removeEventListener(
-            "pointermove",
-            move
-          );
-
-          handle.removeEventListener(
-            "pointerup",
-            finish
-          );
-
-          handle.removeEventListener(
-            "pointercancel",
-            finish
-          );
-        };
-
-      handle.addEventListener(
-        "pointermove",
-        move
-      );
-
-      handle.addEventListener(
-        "pointerup",
-        finish
-      );
-
-      handle.addEventListener(
-        "pointercancel",
-        finish
-      );
-    }
-  );
-}
-
-function handleImage(file) {
-
-  if (!file) return;
-
-  const reader =
-    new FileReader();
-
-  reader.onload =
-    () => {
-
-      const r =
-        getEditing();
-
-      r.image =
-        reader.result;
-
-      renderImage();
-
-      scheduleSave();
-
-      toast(
-        "画像を保存しました"
-      );
-    };
-
-  reader.readAsDataURL(file);
-}
-
-function deleteCurrent() {
-
-  const r =
-    getEditing();
-
-  if (!r) return;
-
-  if (
-    !confirm(
-      `「${
-        r.title ||
-        "無題のレシピ"
-      }」を削除しますか？`
-    )
-  ) return;
+  if(!confirmed) return;
 
   recipes =
     recipes.filter(
-      x =>
-        x.labId !==
-        r.labId
+      item =>
+        item.labId !== editingId
     );
 
   saveRecipes();
@@ -1742,403 +1884,534 @@ function deleteCurrent() {
 
   renderHome();
 
-  toast(
-    "削除しました"
+  showToast(
+    "レシピを削除しました"
   );
 }
 
-function escapeHtml(s) {
 
-  return String(
-    s ?? ""
-  ).replace(
-    /[&<>"']/g,
-    c =>
-      ({
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#39;"
-      }[c])
+/* =================================
+   SEARCH TEXT
+================================= */
+
+function buildSearchText(recipe){
+
+  const values = [
+
+    recipe.title,
+
+    ...normalizeArray(recipe.tags),
+
+    ...normalizeArray(recipe.ingredients)
+      .filter(item =>
+        item.type !== "part"
+      )
+      .map(item =>
+        item.name
+      )
+
+  ];
+
+  return values
+    .map(value =>
+      String(value || "").trim()
+    )
+    .filter(Boolean)
+    .join(" ");
+}
+
+
+function updateSearchPreview(){
+
+  const recipe =
+    getEditingRecipe();
+
+  if(!recipe) return;
+
+  syncCurrentFromDOMWithoutTimestamp();
+
+  $("#searchTextPreview").textContent =
+    buildSearchText(recipe);
+}
+
+
+/* =================================
+   DOM SYNC WITHOUT TOUCHING updatedAt
+================================= */
+
+function syncCurrentFromDOMWithoutTimestamp(){
+
+  const recipe =
+    getEditingRecipe();
+
+  if(!recipe) return;
+
+
+  recipe.id =
+    $("#idInput").value.trim();
+
+  recipe.title =
+    $("#titleInput").value.trim();
+
+  recipe.status =
+    $("#statusSelect").value;
+
+  recipe.tags =
+    $$("#tagList input")
+      .map(input =>
+        input.value.trim()
+      );
+
+  if(!recipe.tags.length){
+    recipe.tags = [""];
+  }
+
+
+  $$("#ingredientList .ingredient-row")
+    .forEach(row => {
+
+      const index =
+        Number(row.dataset.index);
+
+      const item =
+        recipe.ingredients[index];
+
+      if(!item) return;
+
+      row.querySelectorAll("input")
+        .forEach(input => {
+
+          const field =
+            input.dataset.field;
+
+          if(field){
+            item[field] =
+              input.value;
+          }
+
+        });
+
+    });
+}
+
+
+/* =================================
+   CODE GENERATOR
+================================= */
+
+function generateCode(){
+
+  const recipe =
+    getEditingRecipe();
+
+  if(!recipe) return;
+
+  syncCurrentFromDOM();
+
+  const searchText =
+    buildSearchText(recipe);
+
+  const servings =
+    recipe.servings
+      ? Number(recipe.servings)
+      : null;
+
+  const codeData = {
+
+    id: recipe.id,
+
+    name: recipe.title,
+
+    servings,
+
+    image: recipe.image,
+
+    tags: recipe.tags
+      .filter(Boolean),
+
+    searchText,
+
+    ingredients:
+      recipe.ingredients.map(item => {
+
+        if(item.type === "part"){
+
+          return {
+            type: "part",
+            partId: item.partId,
+            name: item.name,
+            amount: item.amount,
+            unit: item.unit
+          };
+
+        }
+
+        return {
+          type: "ingredient",
+          name: item.name,
+          amount: item.amount,
+          unit: item.unit
+        };
+
+      }),
+
+    steps:
+      recipe.steps.map(step => ({
+        text: step.text,
+        links: normalizeArray(step.links)
+      }))
+
+  };
+
+
+  const code =
+`{
+  id: ${JSON.stringify(codeData.id)},
+  name: ${JSON.stringify(codeData.name)},
+  servings: ${JSON.stringify(codeData.servings)},
+  image: ${JSON.stringify(codeData.image)},
+  tags: ${JSON.stringify(codeData.tags)},
+  searchText: ${JSON.stringify(codeData.searchText)},
+  ingredients: ${JSON.stringify(codeData.ingredients, null, 2)},
+  steps: ${JSON.stringify(codeData.steps, null, 2)}
+}`;
+
+  $("#generatedCode").textContent =
+    code;
+
+  $("#codePanel").classList.remove(
+    "is-hidden"
   );
+
+  $("#copyMessage").textContent = "";
+
 }
 
-function escapeAttr(s) {
-  return escapeHtml(s);
-}
 
-function esc(s) {
+/* =================================
+   COPY CODE
+================================= */
 
-  return String(
-    s ?? ""
-  )
-    .replace(
-      /\\/g,
-      "\\\\"
-    )
-    .replace(
-      /"/g,
-      '\\"'
-    )
-    .replace(
-      /\n/g,
-      "\\n"
-    )
-    .replace(
-      /\r/g,
-      ""
+async function copyCode(){
+
+  const code =
+    $("#generatedCode").textContent;
+
+  if(!code) return;
+
+  try{
+
+    await navigator.clipboard.writeText(
+      code
     );
+
+    $("#copyMessage").textContent =
+      "コピーしました";
+
+  }catch(error){
+
+    const textarea =
+      document.createElement("textarea");
+
+    textarea.value = code;
+
+    document.body.appendChild(
+      textarea
+    );
+
+    textarea.select();
+
+    try{
+      document.execCommand("copy");
+
+      $("#copyMessage").textContent =
+        "コピーしました";
+
+    }catch(copyError){
+
+      $("#copyMessage").textContent =
+        "コピーできませんでした";
+
+    }
+
+    textarea.remove();
+  }
 }
 
-let toastTimer;
 
-function toast(msg) {
+/* =================================
+   TOAST
+================================= */
 
-  const t =
+let toastTimer = null;
+
+function showToast(message){
+
+  const toast =
     $("#toast");
 
-  t.textContent =
-    msg;
+  if(!toast) return;
 
-  t.classList.add(
-    "show"
-  );
+  toast.textContent =
+    message;
 
-  clearTimeout(
-    toastTimer
-  );
+  toast.classList.add("show");
+
+  clearTimeout(toastTimer);
 
   toastTimer =
-    setTimeout(
-      () =>
-        t.classList.remove(
-          "show"
-        ),
-      1800
-    );
+    setTimeout(() => {
+
+      toast.classList.remove("show");
+
+    },1800);
 }
 
-$("#goHome")
-  .addEventListener(
-    "click",
-    closeEditor
-  );
 
-$("#backHome")
-  .addEventListener(
-    "click",
-    closeEditor
-  );
+/* =================================
+   EVENTS
+================================= */
 
-$("#newRecipeTop")
-  .addEventListener(
-    "click",
-    newRecipe
-  );
+function bindEvents(){
 
-$("#newRecipeHero")
-  .addEventListener(
-    "click",
-    newRecipe
-  );
+  /* HOME */
 
-$("#addTag")
-  .addEventListener(
-    "click",
-    addTag
-  );
+  $("#goHome")
+    .addEventListener(
+      "click",
+      () => {
 
-$("#addIngredient")
-  .addEventListener(
-    "click",
-    () => {
-
-      syncCurrentFromDOM();
-
-      addIngredientRow();
-    }
-  );
-
-$("#addPart")
-  .addEventListener(
-    "click",
-    () => {
-
-      syncCurrentFromDOM();
-
-      const backdrop =
-        document.createElement(
-          "div"
-        );
-
-      backdrop.className =
-        "modal-backdrop";
-
-      backdrop.innerHTML = `
-        <div class="modal">
-
-          <h3>
-            レシピパーツを選択
-          </h3>
-
-          <p class="help">
-            LABに登録済みのパーツから選びます。
-          </p>
-
-          <div id="partOptions"></div>
-
-          <div class="modal-actions">
-
-            <button
-              class="cancel-btn"
-              type="button"
-            >閉じる</button>
-
-          </div>
-
-        </div>
-      `;
-
-      const box =
-        backdrop.querySelector(
-          "#partOptions"
-        );
-
-      PARTS.forEach(
-        p => {
-
-          const b =
-            document.createElement(
-              "button"
-            );
-
-          b.type =
-            "button";
-
-          b.className =
-            "part-option";
-
-          b.innerHTML = `
-            <strong>
-              ${escapeHtml(
-                p.name
-              )}
-            </strong>
-
-            <span>
-              できあがり
-              ${p.yieldAmount}${p.yieldUnit}
-            </span>
-          `;
-
-          b.addEventListener(
-            "click",
-            () => {
-
-              addPartRow({
-                partId:p.id,
-                amount:"",
-                unit:p.yieldUnit
-              });
-
-              backdrop.remove();
-            }
-          );
-
-          box.appendChild(b);
-        }
-      );
-
-      backdrop.querySelector(
-        ".cancel-btn"
-      ).addEventListener(
-        "click",
-        () =>
-          backdrop.remove()
-      );
-
-      document.body.appendChild(
-        backdrop
-      );
-    }
-  );
-
-$("#addStep")
-  .addEventListener(
-    "click",
-    () => {
-
-      syncCurrentFromDOM();
-
-      addStepRow();
-    }
-  );
-
-$("#statusSelect")
-  .addEventListener(
-    "change",
-    scheduleSave
-  );
-
-$("#idInput")
-  .addEventListener(
-    "input",
-    () => {
-
-      $("#editorHeading")
-        .textContent =
-          $("#titleInput")
-            .value.trim() ||
-          "NEW RECIPE";
-
-      scheduleSave();
-    }
-  );
-
-$("#titleInput")
-  .addEventListener(
-    "input",
-    () => {
-
-      $("#editorHeading")
-        .textContent =
-          $("#titleInput")
-            .value.trim() ||
-          "NEW RECIPE";
-
-      scheduleSave();
-    }
-  );
-
-$$("#servingsPicker button")
-  .forEach(
-    b =>
-      b.addEventListener(
-        "click",
-        () => {
-
-          $$("#servingsPicker button")
-            .forEach(
-              x =>
-                x.classList.remove(
-                  "is-selected"
-                )
-            );
-
-          b.classList.add(
-            "is-selected"
-          );
-
-          scheduleSave();
-        }
-      )
-  );
-
-$("#imageInput")
-  .addEventListener(
-    "change",
-    e =>
-      handleImage(
-        e.target.files[0]
-      )
-  );
-
-$("#removeImage")
-  .addEventListener(
-    "click",
-    () => {
-
-      const r =
-        getEditing();
-
-      r.image = "";
-
-      renderImage();
-
-      scheduleSave();
-    }
-  );
-
-$("#generateCode")
-  .addEventListener(
-    "click",
-    generateCode
-  );
-
-$("#copyCode")
-  .addEventListener(
-    "click",
-    async () => {
-
-      try {
-
-        await navigator.clipboard.writeText(
-          $("#generatedCode")
-            .textContent
-        );
-
-        $("#copyMessage")
-          .textContent =
-            "コピーしました ✓";
-
-        toast(
-          "コードをコピーしました"
-        );
-
-      } catch(e) {
-
-        $("#copyMessage")
-          .textContent =
-            "コピーできませんでした。コードを長押ししてコピーしてください。";
-      }
-    }
-  );
-
-$("#deleteRecipe")
-  .addEventListener(
-    "click",
-    deleteCurrent
-  );
-
-$$(".filter-btn")
-  .forEach(
-    b =>
-      b.addEventListener(
-        "click",
-        () => {
-
-          $$(".filter-btn")
-            .forEach(
-              x =>
-                x.classList.remove(
-                  "is-active"
-                )
-            );
-
-          b.classList.add(
-            "is-active"
-          );
-
-          filter =
-            b.dataset.filter;
-
+        if(editingId){
+          closeEditor();
+        }else{
+          showPage("home");
           renderHome();
         }
-      )
-  );
 
-window.addEventListener(
-  "beforeunload",
-  () => {
+      }
+    );
 
-    if (editingId) {
 
-      syncCurrentFromDOM();
+  $("#newRecipeTop")
+    .addEventListener(
+      "click",
+      newRecipe
+    );
 
-      saveCurrent();
+
+  $("#newRecipeHero")
+    .addEventListener(
+      "click",
+      newRecipe
+    );
+
+
+  $("#backHome")
+    .addEventListener(
+      "click",
+      closeEditor
+    );
+
+
+  /* FILTER */
+
+  $$(".filter-btn")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          setFilter(
+            button.dataset.filter
+          );
+
+        }
+      );
+
+    });
+
+
+  /* EDITOR BASIC */
+
+  $("#idInput")
+    .addEventListener(
+      "input",
+      () => {
+
+        const recipe =
+          getEditingRecipe();
+
+        if(!recipe) return;
+
+        recipe.id =
+          $("#idInput").value.trim();
+
+        scheduleAutosave();
+
+      }
+    );
+
+
+  $("#titleInput")
+    .addEventListener(
+      "input",
+      () => {
+
+        const recipe =
+          getEditingRecipe();
+
+        if(!recipe) return;
+
+        recipe.title =
+          $("#titleInput").value.trim();
+
+        $("#editorHeading").textContent =
+          recipe.title ||
+          "NEW RECIPE";
+
+        updateSearchPreview();
+
+        scheduleAutosave();
+
+      }
+    );
+
+
+  $("#statusSelect")
+    .addEventListener(
+      "change",
+      () => {
+
+        const recipe =
+          getEditingRecipe();
+
+        if(!recipe) return;
+
+        recipe.status =
+          $("#statusSelect").value;
+
+        scheduleAutosave();
+
+      }
+    );
+
+
+  /* IMAGE */
+
+  $("#imageInput")
+    .addEventListener(
+      "change",
+      handleImageChange
+    );
+
+
+  $("#removeImage")
+    .addEventListener(
+      "click",
+      removeImage
+    );
+
+
+  /* TAGS */
+
+  $("#addTag")
+    .addEventListener(
+      "click",
+      addTag
+    );
+
+
+  /* SERVINGS */
+
+  $$("#servingsPicker button")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          setServings(
+            button.dataset.value
+          );
+
+        }
+      );
+
+    });
+
+
+  /* INGREDIENTS */
+
+  $("#addIngredient")
+    .addEventListener(
+      "click",
+      addIngredient
+    );
+
+
+  $("#addPart")
+    .addEventListener(
+      "click",
+      addPart
+    );
+
+
+  /* STEPS */
+
+  $("#addStep")
+    .addEventListener(
+      "click",
+      addStep
+    );
+
+
+  /* CODE */
+
+  $("#generateCode")
+    .addEventListener(
+      "click",
+      generateCode
+    );
+
+
+  $("#copyCode")
+    .addEventListener(
+      "click",
+      copyCode
+    );
+
+
+  /* DELETE */
+
+  $("#deleteRecipe")
+    .addEventListener(
+      "click",
+      deleteRecipe
+    );
+
+
+  /* BEFORE UNLOAD */
+
+  window.addEventListener(
+    "beforeunload",
+    () => {
+
+      if(editingId){
+        saveCurrent();
+      }
+
     }
-  }
-);
+  );
+}
+
+
+/* =================================
+   INIT
+================================= */
+
+bindEvents();
+
+showPage("home");
 
 renderHome();
