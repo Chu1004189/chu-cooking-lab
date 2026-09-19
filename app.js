@@ -838,7 +838,9 @@ function renderIngredientRow(item,index){
         title="ドラッグして並べ替え"
         aria-label="材料を並べ替え"
       >
-        ⋮⋮
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
 
       <input
@@ -901,9 +903,11 @@ function renderPartRow(item,index){
         class="drag-handle"
         data-drag-index="${index}"
         title="ドラッグして並べ替え"
-        aria-label="材料を並べ替え"
+        aria-label="パーツを並べ替え"
       >
-        ⋮⋮
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
 
       <div class="part-name">
@@ -1438,7 +1442,6 @@ function openIngredientLinkModal(stepIndex){
                 ${escapeHtml(ingredient.amount)}
                 ${escapeHtml(ingredient.unit)}
               </span>
-
             </button>
           `;
 
@@ -1544,126 +1547,400 @@ function openIngredientLinkModal(stepIndex){
 
 /* =================================
    DRAG SORT
+   材料・パーツのみ
 ================================= */
 
 function bindDrag(handle){
 
+  let dragging = false;
   let startY = 0;
   let startIndex = null;
-
-  const onPointerDown = event => {
-
-    const recipe =
-      getEditingRecipe();
-
-    if(!recipe) return;
-
-    startY =
-      event.clientY;
-
-    startIndex =
-      Number(handle.dataset.dragIndex);
-
-    handle.setPointerCapture?.(
-      event.pointerId
-    );
-
-    handle.style.opacity = ".45";
-  };
+  let targetIndex = null;
+  let row = null;
+  let rowHeight = 0;
+  let rowStep = 0;
+  let pointerId = null;
 
 
-  const onPointerMove = event => {
-
-    if(startIndex === null) return;
-
-    const row =
-      handle.closest(".ingredient-row");
-
-    if(!row) return;
-
-    const currentIndex =
-      Number(row.dataset.index);
-
-    const delta =
-      event.clientY - startY;
-
-    if(Math.abs(delta) < 20){
-      return;
-    }
+  const resetVisuals = () => {
 
     const rows =
       $$("#ingredientList .ingredient-row");
 
-    const targetRow =
-      rows.find(other => {
+    rows.forEach(item => {
 
-        const index =
-          Number(other.dataset.index);
+      item.style.transition = "none";
+      item.style.transform = "";
 
-        if(index === currentIndex){
-          return false;
-        }
+      item.classList.remove(
+        "is-dragging"
+      );
 
-        const rect =
-          other.getBoundingClientRect();
+    });
 
-        return (
-          event.clientY >
-            rect.top &&
-          event.clientY <
-            rect.bottom
-        );
+    requestAnimationFrame(() => {
+
+      rows.forEach(item => {
+
+        item.style.transition = "";
 
       });
 
-    if(!targetRow) return;
+    });
 
-    const targetIndex =
-      Number(targetRow.dataset.index);
+  };
 
-    if(targetIndex === startIndex){
-      return;
+
+  const updatePositions = event => {
+
+    if(!dragging || !row) return;
+
+    const rows =
+      $$("#ingredientList .ingredient-row");
+
+    const otherRows =
+      rows.filter(item => item !== row);
+
+    const pointerY =
+      event.clientY;
+
+
+    /*
+      残りの行の中で、
+      ポインターがどこに入ったかを判定。
+    */
+
+    let insertionPosition =
+      otherRows.length;
+
+    for(let i = 0; i < otherRows.length; i++){
+
+      const other =
+        otherRows[i];
+
+      const rect =
+        other.getBoundingClientRect();
+
+      const centerY =
+        rect.top +
+        rect.height / 2;
+
+      if(pointerY < centerY){
+
+        insertionPosition = i;
+
+        break;
+      }
+
     }
+
+
+    targetIndex =
+      insertionPosition;
+
+
+    /*
+      掴んでいる行自身を
+      指の位置に追従させる。
+    */
+
+    const deltaY =
+      event.clientY - startY;
+
+    row.style.transform =
+      `translate3d(0,${deltaY}px,0) scale(1.015)`;
+
+
+    /*
+      他の行を上下に逃がす。
+    */
+
+    rows.forEach(other => {
+
+      if(other === row) return;
+
+      const index =
+        Number(other.dataset.index);
+
+      let shift = 0;
+
+
+      /*
+        下方向へ移動
+      */
+
+      if(targetIndex > startIndex){
+
+        if(
+          index > startIndex &&
+          index <= targetIndex
+        ){
+
+          shift =
+            -rowStep;
+        }
+
+      }
+
+
+      /*
+        上方向へ移動
+      */
+
+      else if(targetIndex < startIndex){
+
+        if(
+          index >= targetIndex &&
+          index < startIndex
+        ){
+
+          shift =
+            rowStep;
+        }
+
+      }
+
+
+      other.style.transform =
+        shift
+          ? `translate3d(0,${shift}px,0)`
+          : "";
+
+    });
+
+  };
+
+
+  const finishDrag = (event, commit = true) => {
+
+    if(!dragging) return;
+
+    dragging = false;
+
+
+    try{
+
+      if(
+        pointerId !== null &&
+        handle.hasPointerCapture?.(pointerId)
+      ){
+
+        handle.releasePointerCapture(
+          pointerId
+        );
+
+      }
+
+    }catch(error){
+      /* pointer capture解除失敗は無視 */
+    }
+
 
     const recipe =
       getEditingRecipe();
 
-    if(!recipe) return;
 
-    const [moved] =
-      recipe.ingredients.splice(
-        startIndex,
-        1
+    /*
+      キャンセルの場合は
+      並び順を変更しない。
+    */
+
+    if(
+      !commit ||
+      !recipe ||
+      startIndex === null ||
+      targetIndex === null
+    ){
+
+      resetVisuals();
+
+      startIndex = null;
+      targetIndex = null;
+      row = null;
+      pointerId = null;
+
+      return;
+    }
+
+
+    const finalIndex =
+      Math.max(
+        0,
+        Math.min(
+          targetIndex,
+          recipe.ingredients.length - 1
+        )
       );
 
-    recipe.ingredients.splice(
-      targetIndex,
-      0,
-      moved
-    );
 
-    startIndex = targetIndex;
+    /*
+      見た目を一旦リセットしてから
+      実データを1回だけ並び替える。
+    */
+
+    resetVisuals();
+
+
+    if(finalIndex !== startIndex){
+
+      const [moved] =
+        recipe.ingredients.splice(
+          startIndex,
+          1
+        );
+
+      recipe.ingredients.splice(
+        finalIndex,
+        0,
+        moved
+      );
+
+    }
+
+
+    startIndex = null;
+    targetIndex = null;
+    row = null;
+    pointerId = null;
+
+
+    /*
+      並び替え確定後にだけ再描画。
+    */
 
     renderIngredients(recipe);
 
     scheduleAutosave();
 
-    const newHandle =
-      $$("#ingredientList [data-drag-index]")[startIndex];
-
-    newHandle?.setPointerCapture?.(
-      event.pointerId
-    );
-
-    newHandle?.focus?.();
   };
 
 
-  const onPointerUp = () => {
+  const onPointerDown = event => {
 
-    handle.style.opacity = "";
+    if(dragging) return;
 
-    startIndex = null;
+    const recipe =
+      getEditingRecipe();
+
+    if(!recipe) return;
+
+
+    row =
+      handle.closest(".ingredient-row");
+
+    if(!row) return;
+
+
+    startIndex =
+      Number(row.dataset.index);
+
+    targetIndex =
+      startIndex;
+
+    startY =
+      event.clientY;
+
+    pointerId =
+      event.pointerId;
+
+
+    const rect =
+      row.getBoundingClientRect();
+
+    rowHeight =
+      rect.height;
+
+
+    const list =
+      $("#ingredientList");
+
+
+    const computed =
+      window.getComputedStyle(list);
+
+
+    const gap =
+      parseFloat(
+        computed.rowGap ||
+        computed.gap ||
+        "0"
+      ) || 0;
+
+
+    rowStep =
+      rowHeight + gap;
+
+
+    dragging = true;
+
+
+    event.preventDefault();
+
+
+    try{
+
+      handle.setPointerCapture?.(
+        event.pointerId
+      );
+
+    }catch(error){
+      /* pointer capture非対応は無視 */
+    }
+
+
+    row.classList.add(
+      "is-dragging"
+    );
+
+
+    row.style.transition =
+      "none";
+
+
+    /*
+      最初から少し浮いて見えるようにする。
+    */
+
+    row.style.transform =
+      "translate3d(0,0,0) scale(1.015)";
+
+  };
+
+
+  const onPointerMove = event => {
+
+    if(!dragging) return;
+
+    event.preventDefault();
+
+    updatePositions(event);
+
+  };
+
+
+  const onPointerUp = event => {
+
+    if(!dragging) return;
+
+    event.preventDefault();
+
+    finishDrag(
+      event,
+      true
+    );
+
+  };
+
+
+  const onPointerCancel = event => {
+
+    if(!dragging) return;
+
+    finishDrag(
+      event,
+      false
+    );
+
   };
 
 
@@ -1684,8 +1961,9 @@ function bindDrag(handle){
 
   handle.addEventListener(
     "pointercancel",
-    onPointerUp
+    onPointerCancel
   );
+
 }
 
 
@@ -1822,6 +2100,7 @@ function scheduleAutosave(){
       saveCurrent();
 
     },500);
+
 }
 
 
