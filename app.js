@@ -2062,3 +2062,5 @@ window.addEventListener(
     }
   }
 );
+
+renderHome();
