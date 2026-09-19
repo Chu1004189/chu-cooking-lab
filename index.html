@@ -1,178 +1,616 @@
 <!doctype html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  >
+
   <meta name="theme-color" content="#f3f3f0">
+
   <title>CHU dot COOKING LAB</title>
+
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+
+  <!-- =================================
+       HEADER
+  ================================= -->
+
   <header class="site-header">
     <div class="header-inner">
-      <button class="brand" id="goHome" type="button" aria-label="トップへ">
+
+      <button
+        class="brand"
+        id="goHome"
+        type="button"
+        aria-label="トップへ"
+      >
         <span class="brand-mark">CHU</span>
-        <span class="brand-text">dot COOKING <b>LAB</b></span>
+        <span class="brand-text">
+          dot COOKING <b>LAB</b>
+        </span>
       </button>
-      <button class="header-new" id="newRecipeTop" type="button">＋ NEW RECIPE</button>
+
+      <button
+        class="header-new"
+        id="newRecipeTop"
+        type="button"
+      >
+        ＋ NEW RECIPE
+      </button>
+
     </div>
   </header>
 
+
   <main>
+
+    <!-- =================================
+         HOME
+    ================================= -->
+
     <section id="homePage" class="page">
+
       <div class="page-inner">
+
         <div class="hero-heading">
+
           <div>
             <span class="eyebrow">CHU dot COOKING</span>
-            <h1>RECIPE<br><span>LAB</span></h1>
+
+            <h1>
+              RECIPE<br>
+              <span>LAB</span>
+            </h1>
+
             <p>MY KITCHEN / MY RULES</p>
           </div>
-          <button class="new-recipe-large" id="newRecipeHero" type="button">＋ 新しいレシピを作る</button>
+
+          <button
+            class="new-recipe-large"
+            id="newRecipeHero"
+            type="button"
+          >
+            ＋ 新しいレシピを作る
+          </button>
+
         </div>
+
 
         <div class="toolbar">
-          <div class="status-filter" role="group" aria-label="ステータス">
-            <button class="filter-btn is-active" data-filter="all" type="button">ALL</button>
-            <button class="filter-btn research" data-filter="research" type="button"><i></i> 研究中</button>
-            <button class="filter-btn complete" data-filter="complete" type="button"><i></i> 完成済</button>
+
+          <div
+            class="status-filter"
+            role="group"
+            aria-label="ステータス"
+          >
+
+            <button
+              class="filter-btn is-active"
+              data-filter="all"
+              type="button"
+            >
+              ALL
+            </button>
+
+            <button
+              class="filter-btn research"
+              data-filter="research"
+              type="button"
+            >
+              <i></i>
+              研究中
+            </button>
+
+            <button
+              class="filter-btn complete"
+              data-filter="complete"
+              type="button"
+            >
+              <i></i>
+              完成済
+            </button>
+
           </div>
-          <div id="recipeCount" class="recipe-count"></div>
+
+          <div
+            id="recipeCount"
+            class="recipe-count"
+          ></div>
+
         </div>
 
-        <div id="recipeList" class="recipe-list"></div>
+
+        <div
+          id="recipeList"
+          class="recipe-list"
+        ></div>
+
       </div>
+
     </section>
 
-    <section id="editorPage" class="page is-hidden">
+
+    <!-- =================================
+         EDITOR
+    ================================= -->
+
+    <section
+      id="editorPage"
+      class="page is-hidden"
+    >
+
       <div class="editor-inner">
+
         <div class="editor-topbar">
-          <button class="back-btn" id="backHome" type="button">← LAB TOP</button>
+
+          <button
+            class="back-btn"
+            id="backHome"
+            type="button"
+          >
+            ← LAB TOP
+          </button>
+
           <div class="editor-status-wrap">
-            <span id="saveState" class="save-state">保存済み</span>
-            <select id="statusSelect" aria-label="ステータス">
+
+            <span
+              id="saveState"
+              class="save-state"
+            >
+              保存済み
+            </span>
+
+            <select
+              id="statusSelect"
+              aria-label="ステータス"
+            >
               <option value="research">● 研究中</option>
               <option value="complete">✓ 完成済</option>
             </select>
+
           </div>
+
         </div>
 
+
         <div class="recipe-paper">
+
+          <!-- =================================
+               PAPER HEAD
+          ================================= -->
+
           <div class="paper-head">
-            <span class="paper-kicker">RECIPE RESEARCH</span>
-            <h2 id="editorHeading">NEW RECIPE</h2>
+
+            <span class="paper-kicker">
+              RECIPE RESEARCH
+            </span>
+
+            <h2 id="editorHeading">
+              NEW RECIPE
+            </h2>
+
           </div>
 
-          <div class="form-section">
-            <label class="section-label" for="idInput">ID</label>
-            <input id="idInput" class="text-input mono" placeholder="recipe-name-id" autocomplete="off">
-            <p class="help">半角英数字とハイフンを推奨。CHU dot COOKINGのレシピIDとして使います。</p>
-          </div>
+
+          <!-- =================================
+               ID
+          ================================= -->
 
           <div class="form-section">
-            <label class="section-label" for="titleInput">TITLE</label>
-            <input id="titleInput" class="text-input title-input" placeholder="料理名を入力" autocomplete="off">
+
+            <label
+              class="section-label"
+              for="idInput"
+            >
+              ID
+            </label>
+
+            <input
+              id="idInput"
+              class="text-input mono"
+              placeholder="recipe-name-id"
+              autocomplete="off"
+            >
+
+            <p class="help">
+              半角英数字とハイフンを推奨。CHU dot COOKINGのレシピIDとして使います。
+            </p>
+
           </div>
 
+
+          <!-- =================================
+               TITLE
+          ================================= -->
+
           <div class="form-section">
+
+            <label
+              class="section-label"
+              for="titleInput"
+            >
+              TITLE
+            </label>
+
+            <input
+              id="titleInput"
+              class="text-input title-input"
+              placeholder="料理名を入力"
+              autocomplete="off"
+            >
+
+          </div>
+
+
+          <!-- =================================
+               IMAGE
+          ================================= -->
+
+          <div class="form-section">
+
             <div class="section-label-row">
-              <span class="section-label">IMAGE</span>
-              <button class="mini-btn" id="removeImage" type="button">画像を削除</button>
+
+              <span class="section-label">
+                IMAGE
+              </span>
+
+              <button
+                class="mini-btn"
+                id="removeImage"
+                type="button"
+              >
+                画像を削除
+              </button>
+
             </div>
-            <label class="image-drop" id="imageDrop" for="imageInput">
-              <img id="imagePreview" alt="">
+
+            <label
+              class="image-drop"
+              id="imageDrop"
+              for="imageInput"
+            >
+
+              <img
+                id="imagePreview"
+                alt=""
+              >
+
               <span id="imagePlaceholder">
                 <strong>＋</strong>
                 iPhoneから画像を追加
                 <small>写真をタップして選択</small>
               </span>
+
             </label>
-            <input id="imageInput" type="file" accept="image/*" hidden>
+
+            <input
+              id="imageInput"
+              type="file"
+              accept="image/*"
+              hidden
+            >
+
           </div>
 
+
+          <!-- =================================
+               TAGS
+          ================================= -->
+
           <div class="form-section">
+
             <div class="section-label-row">
-              <span class="section-label">TAGS</span>
-              <button class="mini-btn" id="addTag" type="button">＋ タグを追加</button>
+
+              <span class="section-label">
+                TAGS
+              </span>
+
+              <button
+                class="mini-btn"
+                id="addTag"
+                type="button"
+              >
+                ＋ タグを追加
+              </button>
+
             </div>
-            <div id="tagList" class="tag-editor"></div>
+
+            <div
+              id="tagList"
+              class="tag-editor"
+            ></div>
+
           </div>
 
-          <div class="form-section">
-            <span class="section-label">SERVINGS</span>
-            <div id="servingsPicker" class="servings-picker">
-              <button type="button" data-value="">-</button>
-              <button type="button" data-value="1">1人前</button>
-              <button type="button" data-value="2">2人前</button>
-              <button type="button" data-value="3">3人前</button>
-              <button type="button" data-value="4">4人前</button>
-              <button type="button" data-value="5">5人前</button>
-            </div>
-          </div>
+
+          <!-- =================================
+               SERVINGS
+          ================================= -->
 
           <div class="form-section">
+
+            <span class="section-label">
+              SERVINGS
+            </span>
+
+            <div
+              id="servingsPicker"
+              class="servings-picker"
+            >
+
+              <button
+                type="button"
+                data-value=""
+              >
+                -
+              </button>
+
+              <button
+                type="button"
+                data-value="1"
+              >
+                1人前
+              </button>
+
+              <button
+                type="button"
+                data-value="2"
+              >
+                2人前
+              </button>
+
+              <button
+                type="button"
+                data-value="3"
+              >
+                3人前
+              </button>
+
+              <button
+                type="button"
+                data-value="4"
+              >
+                4人前
+              </button>
+
+              <button
+                type="button"
+                data-value="5"
+              >
+                5人前
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- =================================
+               INGREDIENTS
+          ================================= -->
+
+          <div class="form-section">
+
             <div class="section-label-row">
+
               <div>
-                <span class="section-label">INGREDIENTS</span>
-                <span class="section-note">ドラッグして順番変更</span>
+
+                <span class="section-label">
+                  INGREDIENTS
+                </span>
+
+                <span class="section-note">
+                  ドラッグして順番変更
+                </span>
+
               </div>
+
               <div class="ingredient-add-actions">
-                <button class="mini-btn" id="addIngredient" type="button">＋ 材料</button>
-                <button class="mini-btn part-btn" id="addPart" type="button">＋ パーツ</button>
+
+                <button
+                  class="mini-btn"
+                  id="addIngredient"
+                  type="button"
+                >
+                  ＋ 材料
+                </button>
+
+                <button
+                  class="mini-btn part-btn"
+                  id="addPart"
+                  type="button"
+                >
+                  ＋ パーツ
+                </button>
+
               </div>
+
             </div>
+
+
             <div class="ingredient-head">
-              <span></span><span>材料</span><span>分量</span><span>単位</span><span></span>
+              <span></span>
+              <span>材料</span>
+              <span>分量</span>
+              <span>単位</span>
+              <span></span>
             </div>
-            <div id="ingredientList" class="ingredient-list"></div>
+
+
+            <div
+              id="ingredientList"
+              class="ingredient-list"
+            ></div>
+
           </div>
 
+
+          <!-- =================================
+               HOW TO COOK
+          ================================= -->
+
           <div class="form-section">
+
             <div class="section-label-row">
+
               <div>
-                <span class="section-label">HOW TO COOK</span>
-                <span class="section-note">手順内の材料を紐付けできます</span>
+
+                <span class="section-label">
+                  HOW TO COOK
+                </span>
+
+                <span class="section-note">
+                  手順内の材料を紐付けできます
+                </span>
+
               </div>
+
             </div>
 
-            <div id="stepList" class="step-list"></div>
+
+            <div
+              id="stepList"
+              class="step-list"
+            ></div>
+
 
             <div class="step-add-bottom">
-              <button class="mini-btn" id="addStep" type="button">＋ 手順を追加</button>
+
+              <button
+                class="mini-btn"
+                id="addStep"
+                type="button"
+              >
+                ＋ 手順を追加
+              </button>
+
             </div>
+
           </div>
+
+
+          <!-- =================================
+               SEARCH TEXT
+          ================================= -->
 
           <div class="form-section search-preview-section">
-            <span class="section-label">SEARCH TEXT</span>
-            <div id="searchTextPreview" class="search-preview"></div>
+
+            <span class="section-label">
+              SEARCH TEXT
+            </span>
+
+            <div
+              id="searchTextPreview"
+              class="search-preview"
+            ></div>
+
           </div>
+
+
+          <!-- =================================
+               CODE GENERATOR
+          ================================= -->
 
           <div class="generator">
+
             <div>
-              <span class="section-label">CODE GENERATOR</span>
-              <p>現在のレシピを <code>recipes.js</code> 用の形式に変換します。</p>
+
+              <span class="section-label">
+                CODE GENERATOR
+              </span>
+
+              <p>
+                現在のレシピを
+                <code>recipes.js</code>
+                用の形式に変換します。
+              </p>
+
             </div>
-            <button id="generateCode" class="generate-btn" type="button">コードを生成</button>
+
+            <button
+              id="generateCode"
+              class="generate-btn"
+              type="button"
+            >
+              コードを生成
+            </button>
+
           </div>
 
-          <div id="codePanel" class="code-panel is-hidden">
+
+          <div
+            id="codePanel"
+            class="code-panel is-hidden"
+          >
+
             <div class="code-toolbar">
-              <span>recipes.js</span>
-              <button id="copyCode" type="button">COPY CODE</button>
+
+              <span>
+                recipes.js
+              </span>
+
+              <button
+                id="copyCode"
+                type="button"
+              >
+                COPY CODE
+              </button>
+
             </div>
+
             <pre id="generatedCode"></pre>
-            <div id="copyMessage" class="copy-message"></div>
+
+            <div
+              id="copyMessage"
+              class="copy-message"
+            ></div>
+
           </div>
+
+
+          <!-- =================================
+               DELETE
+          ================================= -->
 
           <div class="danger-zone">
-            <button id="deleteRecipe" type="button">このレシピを削除</button>
+
+            <button
+              id="deleteRecipe"
+              type="button"
+            >
+              このレシピを削除
+            </button>
+
           </div>
+
         </div>
+
       </div>
+
     </section>
+
   </main>
 
-  <div id="toast" class="toast" role="status"></div>
+
+  <!-- =================================
+       TOAST
+  ================================= -->
+
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+  ></div>
+
 
   <script src="app.js"></script>
+
 </body>
 </html>
