@@ -641,24 +641,62 @@ textarea:focus-visible{
   grid-template-columns:30px minmax(0,1.6fr) minmax(75px,.6fr) minmax(65px,.55fr) 35px;
   gap:7px;
   align-items:center;
+  position:relative;
+  will-change:transform;
+}
+
+.ingredient-row:not(.is-dragging){
+  transition:transform .18s cubic-bezier(.22,.8,.25,1);
+}
+
+.ingredient-row.is-dragging{
+  z-index:50;
+  transition:none!important;
+  box-shadow:0 14px 30px rgba(40,40,35,.16);
+  border-radius:11px;
+  background:rgba(255,255,255,.98);
+  opacity:.98;
 }
 
 .drag-handle{
   height:42px;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
+  gap:3px;
   color:#aaa;
   cursor:grab;
-  font-size:16px;
   user-select:none;
   -webkit-user-select:none;
   -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
   touch-action:none;
+}
+
+.drag-handle span{
+  display:block;
+  width:17px;
+  height:2px;
+  border-radius:999px;
+  background:#aaa;
+  transition:background .15s,transform .15s;
+}
+
+.drag-handle:hover span{
+  background:#888;
 }
 
 .drag-handle:active{
   cursor:grabbing;
+}
+
+.ingredient-row.is-dragging .drag-handle{
+  cursor:grabbing;
+}
+
+.ingredient-row.is-dragging .drag-handle span{
+  background:var(--blue);
 }
 
 .ingredient-row input{
@@ -1189,6 +1227,11 @@ textarea:focus-visible{
   .drag-handle,
   .remove-row{
     height:39px;
+  }
+
+  .drag-handle span{
+    width:16px;
+    height:2px;
   }
 
   .step-row{
